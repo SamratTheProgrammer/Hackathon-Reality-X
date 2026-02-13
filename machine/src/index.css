@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --font-urbanist: "Urbanist", sans-serif;
+  --color-primary: #22c55e;
+  --color-secondary: #16a34a;
+  --animate-spin-slow: spin 3s linear infinite;
+}
+
+body {
+  @apply bg-zinc-950 text-white;
+  font-family: "Urbanist", sans-serif;
+}

@@ -1,148 +1,125 @@
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
+import { Camera, CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { Camera, Image, Keyboard, CheckCircle2, MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useApp } from "../context/AppContext";
 
 export const Scan = () => {
-    const [scanState, setScanState] = useState<'initial' | 'scanning' | 'manual' | 'success'>('initial');
-    const [manualCode, setManualCode] = useState("");
+    const navigate = useNavigate();
+    const { addTransaction, wasteTypes } = useApp();
+    const [scanning, setScanning] = useState(true);
+    const [result, setResult] = useState<any>(null);
     const [error, setError] = useState("");
 
-    const handleStartScan = () => {
-        setScanState('scanning');
-        // Simulate scan delay then success
-        setTimeout(() => {
-            setScanState('success');
-        }, 3000);
+    // Simulated QR Scan
+    const handleSimulateScan = () => {
+        // Mocking a QR code data from the Machine App
+        // Format: { id: "TX-123456", points: 150 }
+        const mockData = {
+            id: `TX-${Date.now().toString().slice(-6)}`,
+            points: 150,
+            machineId: "M402",
+            timestamp: new Date().toISOString()
+        };
+
+        processScan(JSON.stringify(mockData));
     };
 
-    const handleManualSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (manualCode.length < 5) {
-            setError("Code must be at least 5 characters");
-            return;
+    const processScan = (dataString: string) => {
+        try {
+            const data = JSON.parse(dataString);
+
+            // Basic Validation
+            if (!data.id || !data.points) {
+                throw new Error("Invalid QR Code format");
+            }
+
+            // In a real app, we would verify signature with backend here.
+
+            setResult(data);
+            setScanning(false);
+
+            // Auto-add points
+            addTransaction({
+                id: data.id,
+                machineId: data.machineId || "Unknown",
+                userId: "user-1",
+                items: [], // Details might not be in QR to save space, or fetched from ID
+                totalPoints: data.points,
+                timestamp: data.timestamp || new Date().toISOString(),
+                status: 'Completed'
+            });
+
+        } catch (err) {
+            setError("Invalid QR Code. Please try again.");
+            setTimeout(() => setError(""), 3000);
         }
-        setError("");
-        setScanState('success');
     };
 
     return (
         <>
             <Navbar />
-            <main className="mx-4 md:mx-16 lg:mx-24 xl:mx-32 border-x border-gray-800 min-h-screen py-10 flex flex-col items-center justify-center">
+            <main className="mx-4 md:mx-16 lg:mx-24 xl:mx-32 border-x border-gray-800 min-h-screen flex flex-col items-center justify-center py-10 relative overflow-hidden">
+                {/* Background scanning effect */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(34,197,94,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.05)_1px,transparent_1px)] bg-[size:100px_100px] opacity-20 pointer-events-none"></div>
 
-                <h1 className="text-4xl font-bold mb-2 text-center">Scan QR / Login</h1>
-                <p className="text-gray-400 mb-8 text-center">Connect to a nearby Smart Waste Machine</p>
-
-                <div className="w-full max-w-md p-6 border border-gray-800 rounded-2xl bg-gray-900/50 relative overflow-hidden">
-
-                    {scanState === 'initial' && (
-                        <div className="flex flex-col gap-4">
-                            <div className="aspect-square bg-gray-950 rounded-xl border-2 border-dashed border-gray-700 flex items-center justify-center mb-4">
-                                <Camera className="size-16 text-gray-600" />
-                            </div>
-
-                            <button
-                                onClick={handleStartScan}
-                                className="bg-primary hover:bg-secondary text-black font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-colors"
-                            >
-                                <Camera className="size-5" />
-                                Start Scan
-                            </button>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <button className="bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors">
-                                    <Image className="size-5" />
-                                    Upload Image
-                                </button>
-                                <button
-                                    onClick={() => setScanState('manual')}
-                                    className="bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
-                                >
-                                    <Keyboard className="size-5" />
-                                    Enter Code
-                                </button>
+                {scanning ? (
+                    <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-3xl p-8 flex flex-col items-center text-center relative z-10 shadow-2xl">
+                        <div className="mb-6 relative">
+                            <div className="size-64 bg-black rounded-2xl border-2 border-gray-700 flex items-center justify-center overflow-hidden relative">
+                                <Camera className="size-12 text-gray-600 animate-pulse" />
+                                {/* Scanning Line Animation */}
+                                <div className="absolute top-0 left-0 w-full h-1 bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-[scan_2s_linear_infinite]"></div>
                             </div>
                         </div>
-                    )}
 
-                    {scanState === 'scanning' && (
-                        <div className="flex flex-col items-center justify-center h-80">
-                            <div className="relative size-48">
-                                <div className="absolute inset-0 border-4 border-primary/30 rounded-lg"></div>
-                                <div className="absolute inset-0 border-t-4 border-primary rounded-lg animate-pulse"></div>
-                                <div className="absolute top-0 left-0 w-full h-1 bg-primary shadow-[0_0_20px_rgba(30,255,0,0.5)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                        <h2 className="text-2xl font-bold mb-2">Scan QR Code</h2>
+                        <p className="text-gray-400 mb-8">Point your camera at the kiosk screen to claim your points.</p>
+
+                        {error && (
+                            <div className="flex items-center gap-2 text-red-500 bg-red-500/10 px-4 py-2 rounded-lg mb-4">
+                                <AlertTriangle className="size-4" /> {error}
                             </div>
-                            <p className="mt-6 text-primary animate-pulse font-medium">Scanning...</p>
+                        )}
+
+                        <button
+                            onClick={handleSimulateScan}
+                            className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all border border-gray-700 w-full mb-4"
+                        >
+                            Simulate Scan (Debug)
+                        </button>
+
+                        <p className="text-xs text-gray-500">
+                            Align the code within the frame to scan automatically.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="w-full max-w-md bg-gray-900 border border-green-500/30 rounded-3xl p-8 flex flex-col items-center text-center relative z-10 shadow-[0_0_50px_rgba(34,197,94,0.1)] animate-in zoom-in duration-300">
+                        <div className="size-20 bg-green-500/20 rounded-full flex items-center justify-center text-green-500 mb-6">
+                            <CheckCircle className="size-10" />
                         </div>
-                    )}
 
-                    {scanState === 'manual' && (
-                        <form onSubmit={handleManualSubmit} className="flex flex-col gap-4">
-                            <label className="text-sm font-medium text-gray-300">Enter Machine QR Code / ID</label>
-                            <input
-                                type="text"
-                                value={manualCode}
-                                onChange={(e) => setManualCode(e.target.value)}
-                                placeholder="e.g. WM-2049-X"
-                                className="bg-black border border-gray-700 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                            />
-                            {error && <p className="text-red-500 text-sm">{error}</p>}
+                        <h2 className="text-3xl font-black text-white mb-2">Points Added!</h2>
+                        <p className="text-gray-400 mb-8">Transaction successfully verified.</p>
 
-                            <div className="flex gap-3 mt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => { setScanState('initial'); setError(''); }}
-                                    className="flex-1 bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 rounded-xl transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 bg-primary hover:bg-secondary text-black font-bold py-3 rounded-xl transition-colors"
-                                >
-                                    Login
-                                </button>
+                        <div className="bg-black/50 p-6 rounded-2xl border border-gray-800 w-full mb-8">
+                            <div className="flex justify-between items-end">
+                                <span className="text-gray-500 uppercase text-xs font-bold tracking-wider">Received</span>
+                                <span className="text-4xl font-black text-primary">+{result?.points}</span>
                             </div>
-                        </form>
-                    )}
-
-                    {scanState === 'success' && (
-                        <div className="flex flex-col items-center text-center py-4">
-                            <div className="size-16 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
-                                <CheckCircle2 className="size-8 text-green-500" />
-                            </div>
-                            <h3 className="text-2xl font-bold text-white mb-1">Connected!</h3>
-                            <p className="text-gray-400 mb-6">You've successfully logged in.</p>
-
-                            <div className="bg-gray-950 rounded-xl p-4 w-full mb-6 flex items-start text-left gap-3">
-                                <MapPin className="size-5 text-gray-400 mt-1 shrink-0" />
-                                <div>
-                                    <p className="text-sm text-gray-400">Machine Location</p>
-                                    <p className="font-semibold text-white">Central Mall, 2nd Floor (Zone B)</p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <span className="flex size-2 bg-green-500 rounded-full"></span>
-                                        <span className="text-xs text-green-400 font-medium">Session Active</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button className="w-full bg-primary hover:bg-secondary text-black font-bold py-3 px-6 rounded-xl transition-colors">
-                                Continue to AR Instructions
-                            </button>
                         </div>
-                    )}
-                </div>
 
-                <style>{`
-                    @keyframes scan {
-                        0% { top: 0; }
-                        50% { top: 100%; }
-                        100% { top: 0; }
-                    }
-                `}</style>
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="bg-primary hover:bg-primary/90 text-black px-8 py-4 rounded-xl font-black w-full flex items-center justify-center gap-2 transition-all"
+                        >
+                            Go to Dashboard <ArrowRight className="size-5" />
+                        </button>
+                    </div>
+                )}
             </main>
             <Footer />
         </>
-    )
-}
+    );
+};
