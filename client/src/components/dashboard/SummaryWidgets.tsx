@@ -15,7 +15,7 @@ export const SummaryWidgets = () => {
         {
             label: "CO₂ Saved",
             value: user?.wasteStats?.totalWeight
-                ? (user.wasteStats.totalWeight * 0.0025).toFixed(1) // Mock: 2.5kg CO2 per kg waste
+                ? (user.wasteStats.totalWeight * 0.0025).toFixed(1) // Mock or real calc
                 : "0",
             unit: "kg",
             icon: Leaf,

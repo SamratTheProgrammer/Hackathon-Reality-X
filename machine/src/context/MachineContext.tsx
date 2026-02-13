@@ -33,26 +33,21 @@ interface MachineContextType {
 
     // Auth
     isAuthenticated: boolean;
+    isLoading: boolean;
     machineData: any | null;
     login: (id: string, secret: string) => Promise<boolean>;
-    register: (data: any) => Promise<boolean>;
+    register: (data: any) => Promise<any>;
     logout: () => void;
 }
 
-const INITIAL_WASTE_TYPES: WasteType[] = [
-    { id: '1', name: 'Plastic Bottle (PET)', pointsPerUnit: 10, unit: 'item', icon: 'Bottle', color: 'bg-blue-500' },
-    { id: '2', name: 'Glass Bottle', pointsPerUnit: 8, unit: 'item', icon: 'Glass', color: 'bg-green-500' },
-    { id: '3', name: 'Aluminum Can', pointsPerUnit: 12, unit: 'item', icon: 'Can', color: 'bg-gray-400' },
-    { id: '4', name: 'Paper/Cardboard', pointsPerUnit: 2, unit: 'g', icon: 'FileText', color: 'bg-yellow-600' },
-    { id: '5', name: 'E-Waste (Small)', pointsPerUnit: 30, unit: 'item', icon: 'Cpu', color: 'bg-purple-600' },
-];
+
 
 
 
 const MachineContext = createContext<MachineContextType | undefined>(undefined);
 
 export const MachineProvider = ({ children }: { children: ReactNode }) => {
-    const [wasteTypes] = useState<WasteType[]>(INITIAL_WASTE_TYPES);
+    const [wasteTypes, setWasteTypes] = useState<WasteType[]>([]);
     const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
     const [capacity, setCapacity] = useState(45); // Start at 45%
     const [machineStatus, setMachineStatus] = useState<'Available' | 'Full' | 'Maintenance'>('Available');
@@ -60,20 +55,51 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
     // Auth State
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [machineData, setMachineData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Load from local storage on mount
+    const backendUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+
+    // Load from local storage on mount & Fetch Waste Types
     useEffect(() => {
-        const storedAuth = localStorage.getItem('machine_auth');
-        if (storedAuth) {
-            try {
-                const parsed = JSON.parse(storedAuth);
-                setIsAuthenticated(true);
-                setMachineData(parsed);
-            } catch (error) {
-                console.error("Failed to parse machine_auth from localStorage", error);
-                localStorage.removeItem('machine_auth'); // Clear invalid data
+        const init = async () => {
+            // Restore Auth
+            const storedAuth = localStorage.getItem('machine_auth');
+            if (storedAuth) {
+                try {
+                    const parsed = JSON.parse(storedAuth);
+                    setIsAuthenticated(true);
+                    setMachineData(parsed);
+                    if (parsed.capacity) setCapacity(parsed.capacity);
+                    if (parsed.status) setMachineStatus(parsed.status);
+                } catch (error) {
+                    console.error("Failed to parse machine_auth", error);
+                    localStorage.removeItem('machine_auth');
+                }
             }
-        }
+
+            // Fetch Waste Types (Dynamic)
+            try {
+                const res = await fetch(`${backendUrl}/api/admin/waste-types`);
+                const data = await res.json();
+                if (data.success && data.data.length > 0) {
+                    const mapped = data.data.map((t: any) => ({
+                        id: t._id,
+                        name: t.name,
+                        pointsPerUnit: t.pointsPerUnit,
+                        unit: t.unit,
+                        icon: t.icon,
+                        color: t.color
+                    }));
+                    setWasteTypes(mapped);
+                }
+            } catch (error) {
+                console.error("Failed to fetch waste types:", error);
+            }
+
+            setIsLoading(false);
+        };
+
+        init();
     }, []);
 
     const updateCapacity = async (newCapacity: number) => {
@@ -86,7 +112,7 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
 
         if (isAuthenticated && machineData?.machineId) {
             try {
-                await fetch('http://localhost:5000/api/machine/update-status', {
+                await fetch(`${backendUrl}/api/machine/update-status`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -128,6 +154,18 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
 
         // Simulating capacity increase
         updateCapacity(Math.min(100, capacity + 5));
+
+        // Sync with Backend (Fire and Forget)
+        if (machineData?.machineId) {
+            fetch(`${backendUrl}/api/machine/transaction`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    machineId: machineData.machineId,
+                    transaction: tx
+                })
+            }).catch(err => console.error("Failed to sync transaction:", err));
+        }
     };
 
     const resetTransaction = () => {
@@ -136,7 +174,7 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (id: string, secret: string) => {
         try {
-            const response = await fetch('http://localhost:5000/api/machine/login', {
+            const response = await fetch(`${backendUrl}/api/machine/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ machineId: id, password: secret })
@@ -160,7 +198,7 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
 
     const register = async (data: any) => {
         try {
-            const response = await fetch('http://localhost:5000/api/machine/register', {
+            const response = await fetch(`${backendUrl}/api/machine/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -172,12 +210,12 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
                 setMachineData(machine);
                 setIsAuthenticated(true);
                 localStorage.setItem('machine_auth', JSON.stringify(machine));
-                return true;
+                return machine; // Return the full machine object
             }
         } catch (error) {
             console.error("Register Error:", error);
         }
-        return false;
+        return null;
     };
 
     const logout = () => {
@@ -197,6 +235,7 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
             resetTransaction,
             updateCapacity,
             isAuthenticated,
+            isLoading,
             machineData,
             login,
             register,

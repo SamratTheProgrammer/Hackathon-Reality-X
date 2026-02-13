@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useMachine } from "../../context/MachineContext";
 import { MapPin, Server, Shield, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
 
 export const MachineSignup = () => {
     const { register } = useMachine();
-    const navigate = useNavigate();
 
     const [formData, setFormData] = useState({
+        machineId: '',
         name: '',
         password: '',
         confirmPassword: '',
@@ -17,9 +17,13 @@ export const MachineSignup = () => {
         capacity: 1000
     });
 
+
+
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [gettingLocation, setGettingLocation] = useState(false);
+
+    const [generatedId, setGeneratedId] = useState('');
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -65,7 +69,8 @@ export const MachineSignup = () => {
         }
 
         try {
-            await register({
+            const machine = await register({
+                id: '', // Auto-gen
                 name: formData.name,
                 location: {
                     address: formData.location,
@@ -74,9 +79,13 @@ export const MachineSignup = () => {
                 },
                 password: formData.password,
                 maxCapacity: formData.capacity,
-                // ID is auto-generated on backend
             });
-            setSuccess(true);
+            if (machine) {
+                setGeneratedId(machine.machineId);
+                setSuccess(true);
+            } else {
+                setError("Registration failed. Please try again.");
+            }
         } catch (err) {
             setError("Registration failed. Please try again.");
         }
@@ -89,7 +98,7 @@ export const MachineSignup = () => {
                     <CheckCircle className="w-20 h-20" />
                 </div>
                 <h1 className="text-4xl font-black text-white mb-4">Registration Successful!</h1>
-                <p className="text-xl text-gray-300 mb-6">Your Machine ID has been generated.</p>
+                <p className="text-xl text-gray-300 mb-6">Your Machine ID has been generated: <br /><span className="text-primary font-mono text-3xl font-bold">{generatedId}</span></p>
 
                 <div className="bg-gray-900 border border-gray-800 p-4 rounded-xl max-w-md w-full mb-6">
                     <p className="text-gray-400 text-sm">Status</p>
@@ -153,15 +162,7 @@ export const MachineSignup = () => {
                     )}
 
                     <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-500 mb-1">Machine ID</label>
-                            <input
-                                type="text"
-                                value="Auto-generated (e.g. M-1024)"
-                                disabled
-                                className="w-full bg-gray-900/50 border border-gray-800 rounded-xl px-4 py-3 text-gray-500 cursor-not-allowed"
-                            />
-                        </div>
+                        {/* Machine ID Input REMOVED */}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-500 mb-1">Device Name</label>

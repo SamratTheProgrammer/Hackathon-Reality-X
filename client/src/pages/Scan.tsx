@@ -8,7 +8,8 @@ import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 export const Scan = () => {
     const navigate = useNavigate();
-    const { addTransaction, isAuthenticated } = useApp();
+    // @ts-ignore
+    const { addTransaction, isAuthenticated, user, backendUrl } = useApp();
     const [manualCode, setManualCode] = useState("");
     const [scanning, setScanning] = useState(true);
     const [result, setResult] = useState<any>(null);
@@ -32,51 +33,61 @@ export const Scan = () => {
         processScan(JSON.stringify(mockData));
     };
 
-    const processScan = (dataString: string) => {
+    const processScan = async (dataString: string) => {
         try {
-            // Check if it's a JSON string
-            let data;
+            // Parse Code/ID
+            let transactionCode = "";
+            let pointsPreview = 0;
+
             if (dataString.trim().startsWith('{')) {
-                data = JSON.parse(dataString);
-            } else if (dataString.startsWith('TX-')) {
-                // Handle manual code that isn't JSON
-                data = {
-                    id: dataString,
-                    points: 150, // Default for manual entry simulation
-                    machineId: "Manual",
-                    timestamp: new Date().toISOString(),
-                    items: [
-                        { wasteId: '1', count: 5, points: 50 }, // 5 Plastic Bottles
-                        { wasteId: '3', count: 10, points: 120 } // 10 Cans
-                    ]
-                };
+                const data = JSON.parse(dataString);
+                transactionCode = data.id;
+                pointsPreview = data.points;
             } else {
-                throw new Error("Invalid format");
+                transactionCode = dataString;
             }
 
-            // Basic Validation
-            if (!data.id || !data.points) {
-                throw new Error("Invalid QR Code format");
+            if (!transactionCode) {
+                throw new Error("Invalid Code");
             }
 
-            // In a real app, we would verify signature with backend here.
-
-            setResult(data);
+            // Call Backend to Claim
             setScanning(false);
 
-            // Auto-add points
-            addTransaction({
-                id: data.id,
-                machineId: data.machineId || "Unknown",
-                userId: "user-1", // This will be handled by context
-                items: data.items || [], // Capture items from QR
-                totalPoints: data.points,
-                timestamp: data.timestamp || new Date().toISOString(),
-                status: 'Completed'
+            // Assuming we have user ID in context or can rely on backend? 
+            // AppContext addTransaction was local. Now we need a direct fetch or context method.
+            // Using fetch directly here for simplicity, or we could add `claimTransaction` to context.
+
+            // We need the authToken/UserId. 
+            // `useApp` provides `user`.
+
+            if (!user?.id) {
+                throw new Error("User not valid");
+            }
+
+            const response = await fetch(`${import.meta.env.VITE_SERVER_URL || 'http://localhost:5000'}/api/user/claim`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.id,
+                    transactionCode: transactionCode
+                })
             });
 
-        } catch (err) {
-            setError("Invalid Code. Please try again.");
+            const resData = await response.json();
+
+            if (resData.success) {
+                setResult({ points: resData.pointsAdded });
+            } else {
+                if (resData.message?.includes("already claimed")) {
+                    throw new Error("This code has already been used.");
+                }
+                throw new Error(resData.message || "Claim failed");
+            }
+
+        } catch (err: any) {
+            setError(err.message || "Invalid Code. Please try again.");
+            setScanning(true); // Reset to scan again
             setTimeout(() => setError(""), 3000);
         }
     };
@@ -84,6 +95,23 @@ export const Scan = () => {
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!manualCode.trim()) return;
+
+        // Check for "XXXXXX-PYY" format (Machine Display format)
+        // Regex: 6 digits, hyphen, P, digits
+        const machineCodeRegex = /^(\d{6})-P(\d+)$/;
+        const match = manualCode.trim().match(machineCodeRegex);
+
+        if (match) {
+            const [_, idPart, pointsPart] = match;
+            const mockData = {
+                id: `TX-${idPart}`,
+                points: parseInt(pointsPart, 10),
+                machineId: "Manual",
+                timestamp: new Date().toISOString()
+            };
+            processScan(JSON.stringify(mockData));
+            return;
+        }
 
         // Try to parse as JSON if they pasted the raw JSON, otherwise treat as ID
         try {
@@ -93,12 +121,7 @@ export const Scan = () => {
             }
             processScan(manualCode);
         } catch {
-            // Assume it is just the ID, we need to mock the rest for now or handle it on backend
-            // For this demo, let's reconstruct the object if they assume they just type the ID
-            // But the current processScan expects a JSON string with points. 
-            // Let's assume the user enters the ID "TX-..." and we look it up (simulated).
-
-            // Simulation: If they enter a code starting with TX, valid.
+            // Assume it is just the ID "TX-..."
             if (manualCode.startsWith('TX-')) {
                 const mockData = {
                     id: manualCode,
@@ -108,7 +131,7 @@ export const Scan = () => {
                 };
                 processScan(JSON.stringify(mockData));
             } else {
-                setError("Invalid code format. Must start with TX-");
+                setError("Invalid code format. Enter JSON, TX-..., or XXXXXX-PYY");
                 setTimeout(() => setError(""), 3000);
             }
         }
@@ -219,7 +242,7 @@ export const Scan = () => {
                                     type="submit"
                                     className="bg-primary hover:bg-green-400 text-black font-bold px-4 py-2 rounded-lg transition-colors"
                                 >
-                                    Submit
+                                    Claim Points
                                 </button>
                             </form>
                         </div>

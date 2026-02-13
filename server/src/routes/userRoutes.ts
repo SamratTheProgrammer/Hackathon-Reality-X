@@ -1,5 +1,7 @@
 import express from 'express';
 import User from '../models/User';
+import Machine from '../models/Machine';
+import Transaction from '../models/Transaction';
 
 const router = express.Router();
 
@@ -8,6 +10,8 @@ const router = express.Router();
 interface IUser {
     clerkId: string;
     points: number;
+    name: string;
+    email?: string; // Add optional email
     wasteStats: {
         plasticBottles: number;
         glassBottles: number;
@@ -19,8 +23,11 @@ interface IUser {
     };
     redemptions: any[];
     save: () => Promise<any>;
-    markModified: (path: string) => void; // Add markModified method
+    markModified: (path: string) => void;
+    set: (path: string, value: any) => void; // Add set method
 }
+// ...
+
 
 // GET /api/user/:clerkId
 router.get('/:clerkId', async (req, res) => {
@@ -112,10 +119,33 @@ router.post('/transaction', async (req, res) => {
 
         await user.save();
 
+        // Save Transaction Record
+        const newTransaction = new Transaction({
+            userId: user.clerkId,
+            userName: user.name,
+            machineId: req.body.machineId || 'unknown',
+            items: items,
+            totalPoints: totalPoints,
+            totalWeight: sessionWeight
+        });
+        await newTransaction.save();
+
         res.json({ success: true, message: 'Transaction processed', newBalance: user.points });
 
     } catch (error: any) {
         console.error('Transaction Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// GET /api/user/activities (Public feed)
+router.get('/activities', async (req, res) => {
+    try {
+        const activities = await Transaction.find()
+            .sort({ createdAt: -1 })
+            .limit(10);
+        res.json({ success: true, data: activities });
+    } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -162,6 +192,105 @@ router.post('/redeem', async (req, res) => {
         await user.save();
 
         res.json({ success: true, message: 'Redemption successful', data: redemption, newBalance: user.points });
+
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /api/user/claim
+router.post('/claim', async (req, res) => {
+    try {
+        const { userId, transactionCode } = req.body;
+
+        let userDoc = await User.findOne({ clerkId: userId }).select('+email');
+
+        if (!userDoc) {
+            // Auto-create user if missing (Webhook lag fallback)
+            // We only have ID here, so name/email will be placeholders until next login/sync
+            const newUser = new User({
+                clerkId: userId,
+                name: 'New Recycler',
+                email: `${userId}@placeholder.com`, // Placeholder to satisfy schema requirement
+                role: 'user',
+                points: 0,
+                wasteStats: {
+                    plasticBottles: 0,
+                    glassBottles: 0,
+                    aluminumCans: 0,
+                    paperWeight: 0,
+                    eWaste: 0,
+                    totalWeight: 0,
+                    transactionsCount: 0
+                }
+            });
+            await newUser.save();
+            userDoc = newUser;
+        }
+
+        const user: IUser = userDoc as any; // Cast to any -> IUser to avoid conflicts
+
+        // Backfill email for existing users if missing (Schema migration)
+        // Check if email is missing or empty string
+        const userEmail = userDoc.get('email');
+        if (!userEmail) {
+            console.log(`Backfilling missing email for user ${userId}`);
+            userDoc.set('email', `${userId}@placeholder.com`);
+        }
+
+        // Find Pending Transaction
+        const transaction = await Transaction.findOne({ transactionCode, status: 'Pending' });
+        if (!transaction) {
+            return res.status(404).json({ success: false, message: 'Invalid or already claimed code.' });
+        }
+
+        // Link Transaction to User
+        transaction.userId = user.clerkId;
+        transaction.userName = user.name;
+        transaction.status = 'Claimed';
+        transaction.claimedAt = new Date();
+
+        // Fetch Machine details to snapshot location
+        if (transaction.machineId) {
+            const machine = await Machine.findOne({ machineId: transaction.machineId });
+            if (machine && machine.location) {
+                transaction.machineLocation = machine.location.address;
+            }
+        }
+
+        await transaction.save();
+
+        // Update User Stats (Reuse logic from /transaction if possible, but distinct here)
+        if (!user.wasteStats) {
+            user.wasteStats = {
+                plasticBottles: 0, glassBottles: 0, aluminumCans: 0,
+                paperWeight: 0, eWaste: 0, totalWeight: 0, transactionsCount: 0
+            };
+        }
+
+        // Update stats based on transaction items
+        let sessionWeight = 0;
+        transaction.items.forEach((item: any) => {
+            const count = item.count || 0;
+            const wasteId = String(item.wasteId);
+            switch (wasteId) {
+                case '1': user.wasteStats.plasticBottles = (user.wasteStats.plasticBottles || 0) + count; break;
+                case '2': user.wasteStats.glassBottles = (user.wasteStats.glassBottles || 0) + count; break;
+                case '3': user.wasteStats.aluminumCans = (user.wasteStats.aluminumCans || 0) + count; break;
+                case '4': user.wasteStats.paperWeight = (user.wasteStats.paperWeight || 0) + count; break;
+                case '5': user.wasteStats.eWaste = (user.wasteStats.eWaste || 0) + count; break;
+            }
+        });
+
+        // Use the weight calculated during machine sync if available, else recalculate (omitted for brevity)
+        user.wasteStats.totalWeight = (user.wasteStats.totalWeight || 0) + (transaction.totalWeight || 0);
+        user.wasteStats.transactionsCount = (user.wasteStats.transactionsCount || 0) + 1;
+
+        user.points = (user.points || 0) + transaction.totalPoints;
+        user.markModified('wasteStats');
+        await user.save();
+
+        res.json({ success: true, message: 'Points claimed successfully!', pointsAdded: transaction.totalPoints, newBalance: user.points });
 
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });

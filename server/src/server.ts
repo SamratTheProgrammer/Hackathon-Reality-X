@@ -30,9 +30,12 @@ app.use('/api/webhooks', webhookRoutes);
 
 app.use(express.json());
 
+import adminRoutes from './routes/adminRoutes';
+
 // Routes
 app.use('/api/user', userRoutes);
 app.use('/api/machine', machineRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
     res.send('Reality-X Server is Running');

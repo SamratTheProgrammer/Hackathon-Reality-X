@@ -28,7 +28,7 @@ export const MachineLayout = () => {
                 <div className="bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border border-gray-800 pointer-events-auto flex items-center gap-4">
                     <div>
                         <span className="font-bold text-xl tracking-tighter">Reality-X</span>
-                        <span className="text-xs text-green-500 ml-2 uppercase font-mono">Machine #402</span>
+                        <span className="text-xs text-green-500 ml-2 uppercase font-mono">Machine #{machineData?.machineId || machineData?.id || '...'}</span>
                     </div>
                 </div>
 

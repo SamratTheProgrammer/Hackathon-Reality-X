@@ -2,15 +2,23 @@ import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import { MapPin, Navigation, Info, Search, Filter } from "lucide-react";
 import { useApp } from "../context/AppContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export const Locate = () => {
     const { machines } = useApp();
     const [filter, setFilter] = useState("All");
+    const [selectedMachine, setSelectedMachine] = useState<any>(null);
 
     const filteredMachines = machines.filter(m =>
         m.isActive && (filter === "All" || m.status === filter)
     );
+
+    // Set first machine as selected by default when machines load
+    useEffect(() => {
+        if (filteredMachines.length > 0 && !selectedMachine) {
+            setSelectedMachine(filteredMachines[0]);
+        }
+    }, [filteredMachines, selectedMachine]);
 
     return (
         <>
@@ -54,19 +62,24 @@ export const Locate = () => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Map Container - Simulated */}
+                        {/* Map Container */}
                         <div className="lg:col-span-2 h-[500px] bg-gray-900/50 rounded-2xl border border-gray-800 overflow-hidden relative group">
-                            {/* In a real app, Map markers would be plotted based on `filteredMachines` coordinates */}
-                            <iframe
-                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15282225.79979123!2d73.7250245393691!3d20.750301298393563!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30635ff06b92b791%3A0xd78c4fa1854213a6!2sIndia!5e0!3m2!1sen!2sin!4v1707736695679!5m2!1sen!2sin"
-                                width="100%"
-                                height="100%"
-                                style={{ border: 0 }}
-                                allowFullScreen
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                                className="w-full h-full grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500"
-                            ></iframe>
+                            {selectedMachine ? (
+                                <iframe
+                                    src={`https://maps.google.com/maps?q=${selectedMachine.location.lat},${selectedMachine.location.lng}&z=15&output=embed`}
+                                    width="100%"
+                                    height="100%"
+                                    style={{ border: 0 }}
+                                    allowFullScreen
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    className="w-full h-full grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500"
+                                ></iframe>
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                    Select a machine to view location
+                                </div>
+                            )}
 
                             {/* Map Overlay Legend */}
                             <div className="absolute top-4 right-4 bg-black/80 backdrop-blur-md p-3 rounded-xl border border-gray-700 space-y-1">
@@ -85,7 +98,11 @@ export const Locate = () => {
                         {/* Location List */}
                         <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                             {filteredMachines.map((loc) => (
-                                <div key={loc.id} className="bg-gray-900/40 border border-gray-800 rounded-xl p-5 hover:bg-gray-800/60 transition-colors group">
+                                <div
+                                    key={loc.id}
+                                    onClick={() => setSelectedMachine(loc)}
+                                    className={`bg-gray-900/40 border rounded-xl p-5 cursor-pointer transition-colors group ${selectedMachine?.id === loc.id ? 'border-primary bg-gray-800/60' : 'border-gray-800 hover:bg-gray-800/60'}`}
+                                >
                                     <div className="flex justify-between items-start mb-2">
                                         <h3 className="font-bold text-lg text-white">{loc.name}</h3>
                                         <span className={`text-xs px-2 py-1 rounded-full border ${loc.status === 'Available' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
@@ -107,9 +124,15 @@ export const Locate = () => {
                                         <div className="flex items-center gap-1 text-sm text-gray-300">
                                             <span className="text-xs text-gray-500">Capacity:</span> {loc.capacity}%
                                         </div>
-                                        <button className="text-sm bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
+                                        <a
+                                            href={`https://www.google.com/maps/dir/?api=1&destination=${loc.location.lat},${loc.location.lng}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
                                             <Navigation className="size-3" /> Directions
-                                        </button>
+                                        </a>
                                     </div>
                                 </div>
                             ))}

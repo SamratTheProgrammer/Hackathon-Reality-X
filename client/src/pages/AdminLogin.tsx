@@ -1,16 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
 
 export const AdminLogin = () => {
-    const { login } = useApp();
+    const { login, user } = useApp();
     const navigate = useNavigate();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Watch for successful admin login (user.role updates to 'admin')
+    useEffect(() => {
+        if (user?.role === 'admin') {
+            navigate('/admin');
+        }
+    }, [user, navigate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -19,14 +26,13 @@ export const AdminLogin = () => {
 
         try {
             const success = await login(email, password);
-            if (success) {
-                navigate('/admin');
-            } else {
+            if (!success) {
                 setError('Invalid admin credentials');
+                setLoading(false);
             }
+            // If success, the useEffect above will handle navigation once state updates
         } catch (err) {
             setError('An error occurred. Please try again.');
-        } finally {
             setLoading(false);
         }
     };
@@ -40,8 +46,8 @@ export const AdminLogin = () => {
             </div>
 
             <div className="w-full max-w-md bg-zinc-900/50 backdrop-blur-xl border border-zinc-800 rounded-3xl p-8 shadow-2xl relative z-10">
-                <Link to="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-8 transition-colors">
-                    <ArrowLeft className="w-4 h-4" /> Back to Home
+                <Link to="/login" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-8 transition-colors px-4 py-2 rounded-lg hover:bg-zinc-800/50">
+                    <ArrowLeft className="w-4 h-4" /> Return to User Login
                 </Link>
 
                 <div className="text-center mb-8">

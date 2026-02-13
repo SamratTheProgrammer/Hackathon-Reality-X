@@ -1,6 +1,10 @@
-import mongoose from 'mongoose';
-
-const userSchema = new mongoose.Schema({
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const mongoose_1 = __importDefault(require("mongoose"));
+const userSchema = new mongoose_1.default.Schema({
     clerkId: {
         type: String,
         required: true,
@@ -9,7 +13,6 @@ const userSchema = new mongoose.Schema({
     email: {
         type: String,
         required: true,
-        select: false, // Hide email by default
     },
     name: {
         type: String,
@@ -33,16 +36,14 @@ const userSchema = new mongoose.Schema({
         transactionsCount: { type: Number, default: 0 },
     },
     redemptions: [{
-        code: String,
-        rewardName: String,
-        cost: Number,
-        expiresAt: Date,
-        createdAt: { type: Date, default: Date.now }
-    }]
+            code: String,
+            rewardName: String,
+            cost: Number,
+            expiresAt: Date,
+            createdAt: { type: Date, default: Date.now }
+        }]
 }, {
     timestamps: true,
 });
-
-const User = mongoose.model('User', userSchema);
-
-export default User;
+const User = mongoose_1.default.model('User', userSchema);
+exports.default = User;

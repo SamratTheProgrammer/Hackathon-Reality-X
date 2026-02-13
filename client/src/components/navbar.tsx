@@ -1,4 +1,4 @@
-import { MenuIcon, XIcon } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useApp } from "../context/AppContext";
@@ -20,8 +20,22 @@ export const Navbar = () => {
         { name: "Dashboard", href: "/dashboard", public: false },
     ];
 
-    // Filter links based on auth state
-    const links = navLinks.filter(link => link.public || isAuthenticated);
+    const isAdmin = user?.role === 'admin';
+
+    // Filter links based on auth state and role
+    const links = navLinks.filter(link => {
+        // Public links are always shown (unless we want to hide them for admin? keeping them for now)
+        if (link.public) return true;
+
+        // Private links
+        if (!isAuthenticated) return false;
+
+        // If Admin, hide specific user links (Dashboard is ambiguous, but usually User Dashboard)
+        // Let's hide 'Dashboard' from main nav if Admin, because Admin has their own Dashboard link
+        if (isAdmin && (link.name === 'Dashboard' || link.name === 'Scan' || link.name === 'Redeem')) return false;
+
+        return true;
+    });
 
     const handleGetStarted = () => {
         if (isAuthenticated) {
@@ -37,7 +51,7 @@ export const Navbar = () => {
         navigate('/');
     };
 
-    const isAdmin = user?.role === 'admin';
+
 
     return (
         <div className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-800 bg-black/50 backdrop-blur-md sticky top-0 z-50">
@@ -104,12 +118,12 @@ export const Navbar = () => {
             </div>
 
             {/* Mobile Menu Button */}
-            <button className="md:hidden text-white" onClick={() => setIsOpen(!isOpen)}>
-                {isOpen ? <XIcon className="size-6" /> : <MenuIcon className="size-6" />}
+            <button className="md:hidden text-white cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
+                {isOpen ? <X className="size-6" /> : <Menu className="size-6" />}
             </button>
 
             {/* Mobile Menu Overlay */}
-            <div className={`flex flex-col items-center justify-center gap-6 text-lg fixed inset-0 z-40 bg-black/95 backdrop-blur-xl transition-all duration-300 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}>
+            <div className={`flex flex-col items-center justify-center gap-6 text-lg fixed inset-0 z-40 bg-black backdrop-blur-xl transition-all duration-300 ${isOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}>
                 {links.map((link) => (
                     <Link
                         key={link.name}

@@ -17,6 +17,7 @@ import { AdminLayout } from "./layouts/AdminLayout";
 import { AdminDashboard } from "./pages/admin/Dashboard";
 import { AdminMachines } from "./pages/admin/Machines";
 import { AdminWasteRules } from "./pages/admin/WasteRules";
+import { AdminUsers } from "./pages/admin/Users";
 import { AdminAnalytics } from "./pages/admin/Analytics";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
@@ -26,13 +27,18 @@ if (!PUBLISHABLE_KEY) {
 }
 
 const ProtectedAdminRoute = ({ children }: { children: ReactNode }) => {
-    const { user, isAuthenticated } = useApp();
+    const { user, isAuthenticated, isLoading } = useApp();
+
+    if (isLoading) {
+        return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>; // Or a nice spinner
+    }
 
     if (!isAuthenticated) {
         return <Navigate to="/admin-login" replace />;
     }
 
     if (user?.role !== 'admin') {
+        // Prevent loop if logic is weird, but technically this means a User is trying to access Admin
         return <Navigate to="/dashboard" replace />;
     }
 
@@ -66,6 +72,7 @@ function App() {
                     }>
                         <Route index element={<AdminDashboard />} />
                         <Route path="machines" element={<AdminMachines />} />
+                        <Route path="users" element={<AdminUsers />} />
                         <Route path="waste-rules" element={<AdminWasteRules />} />
                         <Route path="analytics" element={<AdminAnalytics />} />
                     </Route>

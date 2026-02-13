@@ -49,37 +49,8 @@ export interface Reward {
 
 // --- Initial Data ---
 
-const INITIAL_WASTE_TYPES: WasteType[] = [
-    { id: '1', name: 'Plastic Bottle (PET)', pointsPerUnit: 10, unit: 'item', icon: 'Bottle', color: 'bg-blue-500' },
-    { id: '2', name: 'Glass Bottle', pointsPerUnit: 8, unit: 'item', icon: 'Glass', color: 'bg-green-500' },
-    { id: '3', name: 'Aluminum Can', pointsPerUnit: 12, unit: 'item', icon: 'Can', color: 'bg-gray-400' },
-    { id: '4', name: 'Paper/Cardboard', pointsPerUnit: 2, unit: 'g', icon: 'FileText', color: 'bg-yellow-600' }, // per 100g logic handled in UI
-    { id: '5', name: 'E-Waste (Small)', pointsPerUnit: 30, unit: 'item', icon: 'Cpu', color: 'bg-purple-600' },
-];
-
-const INITIAL_MACHINES: Machine[] = [
-    {
-        id: 'M001', name: 'Central Mall Kiosk',
-        location: { lat: 19.0760, lng: 72.8777, address: 'Phoenix Market City, Mumbai' },
-        status: 'Available', capacity: 45, lastActivity: '10 mins ago', installDate: '2025-01-15'
-    },
-    {
-        id: 'M002', name: 'Metro Station Gate 4',
-        location: { lat: 28.6139, lng: 77.2090, address: 'Rajiv Chowk, Delhi' },
-        status: 'Full', capacity: 98, lastActivity: '2 mins ago', installDate: '2025-02-01'
-    },
-    {
-        id: 'M003', name: 'Tech Park Zone A',
-        location: { lat: 12.9716, lng: 77.5946, address: 'Bangalore Tech Park' },
-        status: 'Maintenance', capacity: 12, lastActivity: '2 days ago', installDate: '2024-12-10'
-    },
-];
-
-const INITIAL_REWARDS: Reward[] = [
-    { id: 'R1', name: '₹50 Metro Card Recharge', cost: 500, description: 'Get ₹50 travel credit.', image: 'metro.png' },
-    { id: 'R2', name: 'Free Coffee Voucher', cost: 300, description: 'Valid at Starbucks & CCD.', image: 'coffee.png' },
-    { id: 'R3', name: '1GB Data Pack', cost: 200, description: 'Valid for Jio/Airtel/Vi.', image: 'data.png' },
-];
+// --- Initial Data ---
+// Removed dummy data in favor of backend fetching
 
 // --- Context ---
 
@@ -114,8 +85,11 @@ interface AppContextType {
     userPoints: number;
     user: User | null;
     isAuthenticated: boolean;
+    isLoading: boolean;
+    backendUrl: string;
     setWasteTypes: React.Dispatch<React.SetStateAction<WasteType[]>>;
     setMachines: React.Dispatch<React.SetStateAction<Machine[]>>;
+    setRewards: React.Dispatch<React.SetStateAction<Reward[]>>;
     addTransaction: (tx: Transaction) => void;
     redeemPoints: (cost: number, rewardName: string) => Promise<boolean>;
     updateMachineStatus: (id: string, status: Machine['status']) => void;
@@ -127,10 +101,11 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-    const [wasteTypes, setWasteTypes] = useState<WasteType[]>(INITIAL_WASTE_TYPES);
-    const [machines, setMachines] = useState<Machine[]>(INITIAL_MACHINES);
+    const backendUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+    const [wasteTypes, setWasteTypes] = useState<WasteType[]>([]);
+    const [machines, setMachines] = useState<Machine[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [rewards] = useState<Reward[]>(INITIAL_REWARDS);
+    const [rewards, setRewards] = useState<Reward[]>([]);
     const [userPoints, setUserPoints] = useState<number>(0);
 
     // Clerk Hooks
@@ -145,13 +120,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     // Derived User State
     const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Fetch User Data from Backend
     useEffect(() => {
         const fetchUserData = async () => {
-            if (clerkUser) {
+            setIsLoading(true);
+            if (adminUser) {
+                setUser(adminUser);
+                setIsLoading(false);
+            } else if (clerkUser) {
                 try {
-                    const response = await fetch(`http://localhost:5000/api/user/${clerkUser.id}`);
+                    const response = await fetch(`${backendUrl}/api/user/${clerkUser.id}`);
                     const data = await response.json();
 
                     if (data.success && data.data) {
@@ -176,19 +156,70 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                     }
                 } catch (error) {
                     console.error("Failed to fetch user data:", error);
+                } finally {
+                    setIsLoading(false);
                 }
-            } else if (adminUser) {
-                setUser(adminUser);
             } else {
                 setUser(null);
                 setUserPoints(0);
+                if (isClerkLoaded) {
+                    setIsLoading(false);
+                }
             }
         };
 
+        // Run whenever clerkUser or adminUser changes
         if (isClerkLoaded) {
             fetchUserData();
         }
-    }, [clerkUser, adminUser, isClerkLoaded]);
+
+        // Fetch Dynamic System Data (WasteTypes, Rewards, Machines)
+        const fetchSystemData = async () => {
+            try {
+                // Fetch Waste Types
+                const wtRes = await fetch(`${backendUrl}/api/admin/waste-types`);
+                const wtData = await wtRes.json();
+                if (wtData.success) setWasteTypes(wtData.data);
+
+                // Fetch Rewards
+                const rwRes = await fetch(`${backendUrl}/api/admin/rewards`);
+                const rwData = await rwRes.json();
+                if (rwData.success) {
+                    // Start with empty rewards if none in DB, don't fallback to INITIAL unless fetch fails completely
+                    if (rwData.data.length > 0) {
+                        // Map _id to id if necessary, though Mongo uses _id
+                        setRewards(rwData.data.map((r: any) => ({ ...r, id: r._id || r.id })));
+                    }
+                }
+
+                // Fetch Machines
+                const mcRes = await fetch(`${backendUrl}/api/machine/all`); // Public or Admin endpoint? machineRoutes has /all
+                const mcData = await mcRes.json();
+                if (mcData.success && mcData.data.length > 0) {
+                    setMachines(mcData.data.map((m: any) => ({
+                        id: m.machineId, // Map machineId to id
+                        name: m.name,
+                        location: m.location,
+                        status: m.status,
+                        capacity: m.capacity || 0,
+                        isActive: m.isActive,
+                        lastActivity: m.lastActivity || 'Recently',
+                        installDate: m.createdAt || 'Unknown'
+                    })));
+                } else if (mcData.success && mcData.data.length === 0) {
+                    setMachines([]); // Clear hardcoded if backend returns empty list (but success)
+                }
+
+            } catch (error) {
+                console.error("Failed to fetch system data:", error);
+                // Fallback to initial data is already set manually in useState, 
+                // but we might want to clear it if we want to show *only* real data.
+                // For now, keeping INITIAL as fallback is safer for demo unless explicitly cleared.
+            }
+        };
+        fetchSystemData();
+
+    }, [clerkUser, adminUser, isClerkLoaded, backendUrl]);
 
     const isAuthenticated = !!user;
 
@@ -198,7 +229,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         if (isAuthenticated && user?.id) {
             try {
                 // Send to Backend
-                const response = await fetch('http://localhost:5000/api/user/transaction', {
+                const response = await fetch(`${backendUrl}/api/user/transaction`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -221,7 +252,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const redeemPoints = async (cost: number, rewardName: string) => {
         if (userPoints >= cost && isAuthenticated && user?.id) {
             try {
-                const response = await fetch('http://localhost:5000/api/user/redeem', {
+                const response = await fetch(`${backendUrl}/api/user/redeem`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -289,6 +320,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
     };
 
+
+
     return (
         <AppContext.Provider value={{
             wasteTypes,
@@ -296,10 +329,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             transactions,
             rewards,
             userPoints,
+            userPoints,
             user,
             isAuthenticated,
+            isLoading,
+            backendUrl,
             setWasteTypes,
             setMachines,
+            setRewards,
             addTransaction,
             redeemPoints,
             updateMachineStatus,

@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Trash2, BarChart, LogOut, Zap } from "lucide-react";
+import { LayoutDashboard, Trash2, BarChart, LogOut, Zap, Users } from "lucide-react";
 import { useApp } from "../context/AppContext";
 
 export const AdminLayout = () => {
@@ -16,6 +16,7 @@ export const AdminLayout = () => {
     const menu = [
         { name: "Dashboard", icon: LayoutDashboard, path: "/admin" },
         { name: "Machines", icon: Zap, path: "/admin/machines" },
+        { name: "Users", icon: Users, path: "/admin/users" },
         { name: "Waste Rules", icon: Trash2, path: "/admin/waste-rules" },
         { name: "Analytics", icon: BarChart, path: "/admin/analytics" },
     ];

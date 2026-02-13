@@ -4,15 +4,19 @@ import { Activity, Power, Settings, RotateCcw, MonitorPlay, LogOut } from "lucid
 import { useEffect, useState } from "react";
 
 export const MachineDashboard = () => {
-    const { machineData, isAuthenticated, logout, capacity, currentTransaction, machineStatus } = useMachine();
+    const { machineData, isAuthenticated, isLoading, logout, capacity, currentTransaction, machineStatus } = useMachine();
     const navigate = useNavigate();
 
     // Protect Route
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (!isLoading && !isAuthenticated) {
             navigate('/machine-login');
         }
-    }, [isAuthenticated, navigate]);
+    }, [isAuthenticated, isLoading, navigate]);
+
+    if (isLoading) {
+        return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading Machine Interface...</div>;
+    }
 
     if (!machineData) return null;
 
@@ -28,11 +32,11 @@ export const MachineDashboard = () => {
 
     const confirmLogout = (e: React.FormEvent) => {
         e.preventDefault();
-        if (logoutPassword === machineData.secret) {
+        if (logoutPassword === machineData.password) {
             logout();
             navigate('/machine-login');
         } else {
-            setLogoutError('Incorrect machine secret.');
+            setLogoutError('Incorrect machine password.');
         }
     };
 
@@ -51,7 +55,7 @@ export const MachineDashboard = () => {
                                 <LogOut className="w-8 h-8" />
                             </div>
                             <h2 className="text-2xl font-bold text-white">Confirm Logout</h2>
-                            <p className="text-gray-400 text-sm mt-2">Enter machine secret to terminate session.</p>
+                            <p className="text-gray-400 text-sm mt-2">Enter machine password to terminate session.</p>
                         </div>
 
                         <form onSubmit={confirmLogout} className="space-y-4">
@@ -60,7 +64,7 @@ export const MachineDashboard = () => {
                                 autoFocus
                                 value={logoutPassword}
                                 onChange={(e) => setLogoutPassword(e.target.value)}
-                                placeholder="Machine Secret"
+                                placeholder="Machine Password"
                                 className="w-full bg-black border border-gray-800 rounded-xl px-4 py-3 text-white focus:border-red-500 focus:outline-none transition-colors text-center font-mono"
                             />
 
@@ -93,9 +97,9 @@ export const MachineDashboard = () => {
                 <div>
                     <h1 className="text-3xl font-black text-white flex items-center gap-3">
                         <MonitorPlay className="w-8 h-8 text-green-500" />
-                        {machineData.name || machineData.id}
+                        {machineData.name || machineData.machineId || machineData.id}
                     </h1>
-                    <p className="text-gray-400 font-mono text-sm mt-1">ID: {machineData.id} • {machineData.location}</p>
+                    <p className="text-gray-400 font-mono text-sm mt-1">ID: {machineData.machineId || machineData.id} • {machineData.location?.address || (typeof machineData.location === 'string' ? machineData.location : 'Unknown Location')}</p>
                 </div>
 
                 <div className="flex items-center gap-4">

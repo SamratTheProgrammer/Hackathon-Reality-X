@@ -13,7 +13,7 @@ import { useApp } from "../context/AppContext";
 import { useEffect } from "react";
 
 export const Dashboard = () => {
-    const { isAuthenticated } = useApp();
+    const { isAuthenticated, user } = useApp();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -31,7 +31,7 @@ export const Dashboard = () => {
             <LenisScroll />
             <main className="mx-4 md:mx-16 lg:mx-24 xl:mx-32 border-x border-gray-800 min-h-screen">
                 <div className="pt-10 pb-20">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-2">Welcome Back, User!</h1>
+                    <h1 className="text-4xl md:text-5xl font-bold mb-2">Welcome Back, {user?.name || 'User'}!</h1>
                     <p className="text-gray-400 mb-8">Track your impact and manage your recycling.</p>
 
                     <SummaryWidgets />

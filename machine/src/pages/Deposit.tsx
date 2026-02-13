@@ -80,12 +80,8 @@ export const MachineDeposit = () => {
                             relative border rounded-3xl p-6 flex flex-col items-center justify-between gap-4 transition-all select-none
                             ${count > 0 ? 'bg-gray-800 border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.15)]' : 'bg-gray-900/50 border-gray-800'}
                         `}>
-                                <div className={`w-16 h-16 rounded-2xl ${type.color} bg-opacity-20 flex items-center justify-center text-2xl`}>
-                                    {type.icon === 'Bottle' && '🍾'}
-                                    {type.icon === 'Can' && '🥫'}
-                                    {type.icon === 'Glass' && '🍷'}
-                                    {type.icon === 'FileText' && '📄'}
-                                    {type.icon === 'Cpu' && '🔌'}
+                                <div className="w-16 h-16 flex items-center justify-center text-6xl mb-2">
+                                    {type.icon}
                                 </div>
 
                                 <div className="text-center">
