@@ -7,7 +7,7 @@ import { useApp } from "../context/AppContext";
 
 export const Scan = () => {
     const navigate = useNavigate();
-    const { addTransaction, wasteTypes } = useApp();
+    const { addTransaction } = useApp();
     const [scanning, setScanning] = useState(true);
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState("");

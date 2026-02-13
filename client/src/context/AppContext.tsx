@@ -128,7 +128,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [userPoints, setUserPoints] = useState<number>(0);
 
     // Clerk Hooks
-    const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
+    const { user: clerkUser, isLoaded: _isClerkLoaded } = useUser();
     const { signOut } = useClerk();
 
     // Admin State (Local)
@@ -198,7 +198,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // Deprecated for Users (Handled by Clerk), kept for interface compatibility or legacy
-    const signup = async (name: string, email: string, pass: string): Promise<boolean> => {
+    const signup = async (_name: string, _email: string, _pass: string): Promise<boolean> => {
         return false;
     };
 
