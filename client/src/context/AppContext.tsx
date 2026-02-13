@@ -22,6 +22,7 @@ export interface Machine {
     };
     status: 'Available' | 'Full' | 'Maintenance';
     capacity: number; // 0-100 percentage
+    isActive?: boolean;
     lastActivity: string;
     installDate: string;
 }
@@ -44,18 +45,7 @@ export interface Reward {
     image: string;
 }
 
-interface AppContextType {
-    wasteTypes: WasteType[];
-    machines: Machine[];
-    transactions: Transaction[];
-    rewards: Reward[];
-    userPoints: number;
-    setWasteTypes: React.Dispatch<React.SetStateAction<WasteType[]>>;
-    setMachines: React.Dispatch<React.SetStateAction<Machine[]>>;
-    addTransaction: (tx: Transaction) => void;
-    redeemPoints: (cost: number) => boolean;
-    updateMachineStatus: (id: string, status: Machine['status']) => void;
-}
+
 
 // --- Initial Data ---
 
@@ -98,6 +88,22 @@ export interface User {
     name: string;
     email: string;
     role: 'user' | 'admin';
+    wasteStats?: {
+        plasticBottles: number;
+        glassBottles: number;
+        aluminumCans: number;
+        paperWeight: number;
+        eWaste: number;
+        totalWeight: number;
+        transactionsCount: number;
+    };
+    redemptions?: {
+        code: string;
+        rewardName: string;
+        cost: number;
+        expiresAt: string;
+        createdAt: string;
+    }[];
 }
 
 interface AppContextType {
@@ -111,7 +117,7 @@ interface AppContextType {
     setWasteTypes: React.Dispatch<React.SetStateAction<WasteType[]>>;
     setMachines: React.Dispatch<React.SetStateAction<Machine[]>>;
     addTransaction: (tx: Transaction) => void;
-    redeemPoints: (cost: number) => boolean;
+    redeemPoints: (cost: number, rewardName: string) => Promise<boolean>;
     updateMachineStatus: (id: string, status: Machine['status']) => void;
     login: (email: string, pass: string) => Promise<boolean>;
     signup: (name: string, email: string, pass: string) => Promise<boolean>;
@@ -128,7 +134,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const [userPoints, setUserPoints] = useState<number>(0);
 
     // Clerk Hooks
-    const { user: clerkUser, isLoaded: _isClerkLoaded } = useUser();
+    const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
     const { signOut } = useClerk();
 
     // Admin State (Local)
@@ -140,37 +146,107 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // Derived User State
     const [user, setUser] = useState<User | null>(null);
 
+    // Fetch User Data from Backend
     useEffect(() => {
-        if (adminUser) {
-            setUser(adminUser);
-        } else if (clerkUser) {
-            setUser({
-                id: clerkUser.id,
-                name: clerkUser.fullName || clerkUser.firstName || 'User',
-                email: clerkUser.primaryEmailAddress?.emailAddress || '',
-                role: 'user'
-            });
-            // Mock points for Clerk user
-            if (userPoints === 0) setUserPoints(500);
-        } else {
-            setUser(null);
-        }
-    }, [adminUser, clerkUser]);
+        const fetchUserData = async () => {
+            if (clerkUser) {
+                try {
+                    const response = await fetch(`http://localhost:5000/api/user/${clerkUser.id}`);
+                    const data = await response.json();
 
+                    if (data.success && data.data) {
+                        setUser({
+                            id: data.data.clerkId || clerkUser.id,
+                            name: data.data.name || clerkUser.fullName || 'User',
+                            email: data.data.email || '',
+                            role: data.data.role || 'user',
+                            wasteStats: data.data.wasteStats, // Add wasteStats
+                            redemptions: data.data.redemptions
+                        });
+                        setUserPoints(data.data.points || 0);
+                    } else {
+                        // Fallback if backend user doesn't exist yet (webhook lag?)
+                        console.warn("User not found in backend yet");
+                        setUser({
+                            id: clerkUser.id,
+                            name: clerkUser.fullName || 'User',
+                            email: clerkUser.primaryEmailAddress?.emailAddress || '',
+                            role: 'user'
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch user data:", error);
+                }
+            } else if (adminUser) {
+                setUser(adminUser);
+            } else {
+                setUser(null);
+                setUserPoints(0);
+            }
+        };
+
+        if (isClerkLoaded) {
+            fetchUserData();
+        }
+    }, [clerkUser, adminUser, isClerkLoaded]);
 
     const isAuthenticated = !!user;
 
-    const addTransaction = (tx: Transaction) => {
+    const addTransaction = async (tx: Transaction) => {
         setTransactions(prev => [tx, ...prev]);
-        if (tx.userId !== 'guest') {
-            setUserPoints(prev => prev + tx.totalPoints);
+
+        if (isAuthenticated && user?.id) {
+            try {
+                // Send to Backend
+                const response = await fetch('http://localhost:5000/api/user/transaction', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        totalPoints: tx.totalPoints,
+                        items: tx.items
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    setUserPoints(data.newBalance);
+                    // Refresh user stats ideally
+                }
+            } catch (error) {
+                console.error("Transaction sync error:", error);
+            }
         }
     };
 
-    const redeemPoints = (cost: number) => {
-        if (userPoints >= cost) {
-            setUserPoints(prev => prev - cost);
-            return true;
+    const redeemPoints = async (cost: number, rewardName: string) => {
+        if (userPoints >= cost && isAuthenticated && user?.id) {
+            try {
+                const response = await fetch('http://localhost:5000/api/user/redeem', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        rewardName,
+                        cost
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    setUserPoints(data.newBalance);
+                    // Update user redemptions locally
+                    setUser(prev => prev ? {
+                        ...prev,
+                        redemptions: [...(prev.redemptions || []), data.data]
+                    } : null);
+                    return true;
+                }
+                return false;
+
+            } catch (error) {
+                console.error("Redemption error:", error);
+                return false;
+            }
         }
         return false;
     };

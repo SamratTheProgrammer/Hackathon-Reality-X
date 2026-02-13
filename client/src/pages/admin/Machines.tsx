@@ -1,45 +1,119 @@
-import { useState } from "react";
-import { useApp } from "../../context/AppContext";
+import { useEffect, useState } from "react";
+// import { useApp } from "../../context/AppContext";
 import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import type { Machine } from "../../context/AppContext";
 
 export const AdminMachines = () => {
-    const { machines, setMachines, updateMachineStatus } = useApp();
+    const [machines, setMachines] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [filter, setFilter] = useState("All");
 
+    useEffect(() => {
+        fetchMachines();
+        // Poll every 30 seconds
+        const interval = setInterval(fetchMachines, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const fetchMachines = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/api/machine/all');
+            const data = await res.json();
+            if (data.success) {
+                // Map backend data to frontend model
+                const mappedMachines = data.data.map((m: any) => ({
+                    id: m.machineId,
+                    name: m.name,
+                    location: m.location,
+                    status: m.status,
+                    capacity: m.capacity,
+                    isActive: m.isActive,
+                    lastActivity: new Date(m.lastActivity).toLocaleString(),
+                    installDate: new Date(m.createdAt || Date.now()).toLocaleDateString()
+                }));
+                setMachines(mappedMachines);
+            }
+        } catch (error) {
+            console.error("Failed to fetch machines:", error);
+        }
+    };
+
     // Form State
     const [formData, setFormData] = useState({
+        machineId: "",
         name: "",
         address: "",
         lat: "",
         lng: "",
-        capacity: "0"
+        password: ""
     });
 
-    const handleAddMachine = (e: React.FormEvent) => {
+    const handleAddMachine = async (e: React.FormEvent) => {
         e.preventDefault();
-        const newMachine: Machine = {
-            id: `M${Date.now().toString().slice(-4)}`,
-            name: formData.name,
-            location: {
-                address: formData.address,
-                lat: parseFloat(formData.lat) || 0,
-                lng: parseFloat(formData.lng) || 0
-            },
-            status: 'Available',
-            capacity: parseInt(formData.capacity) || 0,
-            lastActivity: 'Just now',
-            installDate: new Date().toISOString().split('T')[0]
-        };
-        setMachines([...machines, newMachine]);
-        setShowForm(false);
-        setFormData({ name: "", address: "", lat: "", lng: "", capacity: "0" });
+        try {
+            const res = await fetch('http://localhost:5000/api/machine/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    machineId: formData.machineId || undefined, // Allow backend to auto-generate
+                    name: formData.name,
+                    location: {
+                        address: formData.address,
+                        lat: parseFloat(formData.lat) || 0,
+                        lng: parseFloat(formData.lng) || 0
+                    },
+                    password: formData.password || 'admin123'
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchMachines();
+                setShowForm(false);
+                setFormData({ machineId: "", name: "", address: "", lat: "", lng: "", password: "" });
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error("Register Error:", error);
+        }
+    };
+
+    const updateMachineStatus = async (id: string, status: string) => {
+        try {
+            await fetch('http://localhost:5000/api/machine/update-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ machineId: id, status, capacity: status === 'Available' ? 0 : undefined })
+            });
+            fetchMachines();
+        } catch (error) {
+            console.error("Update Error:", error);
+        }
+    };
+
+    const approveMachine = async (id: string) => {
+        try {
+            const res = await fetch('http://localhost:5000/api/machine/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ machineId: id })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchMachines();
+            } else {
+                alert("Failed to approve");
+            }
+        } catch (error) {
+            console.error("Approval Error:", error);
+        }
     };
 
     const filteredMachines = filter === "All"
         ? machines
-        : machines.filter(m => m.status === filter);
+        : filter === "Pending"
+            ? machines.filter(m => !m.isActive)
+            : machines.filter(m => m.isActive && m.status === filter);
 
     return (
         <div className="space-y-6">
@@ -55,7 +129,7 @@ export const AdminMachines = () => {
 
             {/* Stats/Filter Bar */}
             <div className="flex gap-4 overflow-x-auto pb-2">
-                {['All', 'Available', 'Full', 'Maintenance'].map((status) => (
+                {['All', 'Available', 'Full', 'Maintenance', 'Pending'].map((status) => (
                     <button
                         key={status}
                         onClick={() => setFilter(status)}
@@ -72,21 +146,28 @@ export const AdminMachines = () => {
             {/* Machine List */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredMachines.map((machine) => (
-                    <div key={machine.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors">
+                    <div key={machine.id} className={`bg-gray-900 border ${!machine.isActive ? 'border-yellow-500/30' : 'border-gray-800'} rounded-xl p-5 hover:border-gray-700 transition-colors`}>
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h3 className="font-bold text-lg">{machine.name}</h3>
                                 <p className="text-xs text-gray-500 font-mono">ID: {machine.id}</p>
                             </div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${machine.status === 'Available' ? 'bg-green-500/10 text-green-500' :
-                                machine.status === 'Full' ? 'bg-red-500/10 text-red-500' :
-                                    'bg-yellow-500/10 text-yellow-500'
-                                }`}>
-                                {machine.status === 'Available' && <CheckCircle className="size-3" />}
-                                {machine.status === 'Full' && <XCircle className="size-3" />}
-                                {machine.status === 'Maintenance' && <AlertTriangle className="size-3" />}
-                                {machine.status}
-                            </span>
+
+                            {!machine.isActive ? (
+                                <span className="px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 bg-yellow-500/10 text-yellow-500">
+                                    Pending
+                                </span>
+                            ) : (
+                                <span className={`px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${machine.status === 'Available' ? 'bg-green-500/10 text-green-500' :
+                                    machine.status === 'Full' ? 'bg-red-500/10 text-red-500' :
+                                        'bg-yellow-500/10 text-yellow-500'
+                                    }`}>
+                                    {machine.status === 'Available' && <CheckCircle className="size-3" />}
+                                    {machine.status === 'Full' && <XCircle className="size-3" />}
+                                    {machine.status === 'Maintenance' && <AlertTriangle className="size-3" />}
+                                    {machine.status}
+                                </span>
+                            )}
                         </div>
 
                         <div className="space-y-3 text-sm text-gray-400">
@@ -114,29 +195,40 @@ export const AdminMachines = () => {
 
                         {/* Actions */}
                         <div className="mt-4 pt-4 border-t border-gray-800 flex gap-2">
-                            {machine.status !== 'Maintenance' && (
+                            {!machine.isActive ? (
                                 <button
-                                    onClick={() => updateMachineStatus(machine.id, 'Maintenance')}
-                                    className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-bold"
+                                    onClick={() => approveMachine(machine.id)}
+                                    className="w-full py-2 bg-yellow-500 text-black hover:bg-yellow-400 rounded-lg text-xs font-bold transition-colors"
                                 >
-                                    Maintenance
+                                    Approve & Activate
                                 </button>
-                            )}
-                            {machine.status === 'Maintenance' && (
-                                <button
-                                    onClick={() => updateMachineStatus(machine.id, 'Available')}
-                                    className="flex-1 py-2 bg-green-900/30 hover:bg-green-900/50 text-green-400 rounded-lg text-xs font-bold"
-                                >
-                                    Set Available
-                                </button>
-                            )}
-                            {machine.status === 'Full' && (
-                                <button
-                                    onClick={() => updateMachineStatus(machine.id, 'Available')} // Simulating emptying
-                                    className="flex-1 py-2 bg-blue-900/30 hover:bg-blue-900/50 text-blue-400 rounded-lg text-xs font-bold"
-                                >
-                                    Empty Bin
-                                </button>
+                            ) : (
+                                <>
+                                    {machine.status !== 'Maintenance' && (
+                                        <button
+                                            onClick={() => updateMachineStatus(machine.id, 'Maintenance')}
+                                            className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-bold"
+                                        >
+                                            Maintenance
+                                        </button>
+                                    )}
+                                    {machine.status === 'Maintenance' && (
+                                        <button
+                                            onClick={() => updateMachineStatus(machine.id, 'Available')}
+                                            className="flex-1 py-2 bg-green-900/30 hover:bg-green-900/50 text-green-400 rounded-lg text-xs font-bold"
+                                        >
+                                            Set Available
+                                        </button>
+                                    )}
+                                    {machine.status === 'Full' && (
+                                        <button
+                                            onClick={() => updateMachineStatus(machine.id, 'Available')} // Simulating emptying
+                                            className="flex-1 py-2 bg-blue-900/30 hover:bg-blue-900/50 text-blue-400 rounded-lg text-xs font-bold"
+                                        >
+                                            Empty Bin
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -150,6 +242,15 @@ export const AdminMachines = () => {
                         <h2 className="text-xl font-bold mb-4">Register New Machine</h2>
                         <form onSubmit={handleAddMachine} className="space-y-4">
                             <div>
+                                <label className="block text-sm text-gray-400 mb-1">Machine ID</label>
+                                <input
+                                    className="w-full bg-black border border-gray-700 rounded-lg p-2 focus:border-primary outline-none text-white"
+                                    value={formData.machineId}
+                                    onChange={e => setFormData({ ...formData, machineId: e.target.value })}
+                                    placeholder="Leave empty to auto-generate"
+                                />
+                            </div>
+                            <div>
                                 <label className="block text-sm text-gray-400 mb-1">Machine Name</label>
                                 <input
                                     required
@@ -157,6 +258,17 @@ export const AdminMachines = () => {
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                                     placeholder="e.g. Downtown Kiosk 2"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Passcode (for Machine Login)</label>
+                                <input
+                                    required
+                                    type="password"
+                                    className="w-full bg-black border border-gray-700 rounded-lg p-2 focus:border-primary outline-none text-white"
+                                    value={formData.password}
+                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                    placeholder="Set a secret key"
                                 />
                             </div>
                             <div>

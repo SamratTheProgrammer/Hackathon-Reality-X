@@ -12,16 +12,16 @@ export const Navbar = () => {
     const location = useLocation();
 
     // Define all possible links
-    const allLinks = [
+    const navLinks = [
         { name: "Home", href: "/", public: true },
+        { name: "Locate", href: "/locate", public: true },
+        { name: "Scan", href: "/scan", public: true },
+        { name: "Redeem", href: "/redeem", public: true },
         { name: "Dashboard", href: "/dashboard", public: false },
-        { name: "Locate", href: "/locate", public: false },
-        { name: "Scan QR", href: "/scan", public: false },
-        { name: "Redeem", href: "/redeem", public: false },
     ];
 
     // Filter links based on auth state
-    const links = allLinks.filter(link => link.public || isAuthenticated);
+    const links = navLinks.filter(link => link.public || isAuthenticated);
 
     const handleGetStarted = () => {
         if (isAuthenticated) {

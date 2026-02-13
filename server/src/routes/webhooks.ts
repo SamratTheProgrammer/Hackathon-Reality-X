@@ -43,32 +43,41 @@ router.post('/clerk', bodyParser.raw({ type: 'application/json' }), async (req: 
 
         // Handle the event
         const eventType = evt.type;
+        console.log(`Webhook Event Type: ${eventType}`);
+
         const { id, email_addresses, first_name, last_name } = evt.data;
+        // console.log('Webhook Data:', JSON.stringify(evt.data, null, 2));
 
         if (eventType === 'user.created') {
             const email = email_addresses[0]?.email_address;
             const name = `${first_name} ${last_name}`;
+            console.log(`Attempting to create user: ${id}, ${email}, ${name}`);
 
-            await User.create({
+            const newUser = await User.create({
                 clerkId: id,
                 email,
                 name,
             });
-            console.log(`User created: ${id}`);
+            console.log(`User created in DB: ${newUser._id}`);
         }
         else if (eventType === 'user.updated') {
             const email = email_addresses[0]?.email_address;
             const name = `${first_name} ${last_name}`;
+            console.log(`Attempting to update user: ${id}`);
 
-            await User.findOneAndUpdate({ clerkId: id }, {
+            const updatedUser = await User.findOneAndUpdate({ clerkId: id }, {
                 email,
                 name,
-            });
-            console.log(`User updated: ${id}`);
+            }, { new: true });
+            console.log('User updatedResult:', updatedUser ? 'Success' : 'Not Found');
         }
         else if (eventType === 'user.deleted') {
+            console.log(`Attempting to delete user: ${id}`);
             await User.findOneAndDelete({ clerkId: id });
             console.log(`User deleted: ${id}`);
+        }
+        else {
+            console.log(`Unhandled Event Type: ${eventType}`);
         }
 
         return res.status(200).json({
@@ -77,7 +86,7 @@ router.post('/clerk', bodyParser.raw({ type: 'application/json' }), async (req: 
         });
 
     } catch (error: any) {
-        console.error('Webhook Error:', error.message);
+        console.error('Webhook Error Details:', error);
         return res.status(500).json({
             success: false,
             message: error.message

@@ -8,9 +8,9 @@ export const Locate = () => {
     const { machines } = useApp();
     const [filter, setFilter] = useState("All");
 
-    const filteredMachines = filter === "All"
-        ? machines
-        : machines.filter(m => m.status === filter);
+    const filteredMachines = machines.filter(m =>
+        m.isActive && (filter === "All" || m.status === filter)
+    );
 
     return (
         <>
@@ -42,8 +42,8 @@ export const Locate = () => {
                                     key={status}
                                     onClick={() => setFilter(status)}
                                     className={`px-4 py-2 rounded-xl border text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${filter === status
-                                            ? "bg-white text-black border-white"
-                                            : "bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-600"
+                                        ? "bg-white text-black border-white"
+                                        : "bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-600"
                                         }`}
                                 >
                                     {status === filter && <Filter className="size-3" />}
@@ -89,8 +89,8 @@ export const Locate = () => {
                                     <div className="flex justify-between items-start mb-2">
                                         <h3 className="font-bold text-lg text-white">{loc.name}</h3>
                                         <span className={`text-xs px-2 py-1 rounded-full border ${loc.status === 'Available' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-                                                loc.status === 'Full' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                                                    'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+                                            loc.status === 'Full' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                                'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
                                             }`}>
                                             {loc.status}
                                         </span>

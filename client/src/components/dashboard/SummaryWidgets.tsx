@@ -1,12 +1,44 @@
 import { Leaf, Recycle, Coins, TrendingUp } from "lucide-react";
+import { useApp } from "../../context/AppContext";
 
 export const SummaryWidgets = () => {
-    // Dummy Data
+    const { user, userPoints } = useApp();
+
     const stats = [
-        { label: "Total Points", value: "1,250", unit: "pts", icon: Coins, color: "text-yellow-400" },
-        { label: "CO₂ Saved", value: "45.2", unit: "kg", icon: Leaf, color: "text-green-400" },
-        { label: "Waste Recycled", value: "12.5", unit: "kg", icon: Recycle, color: "text-blue-400" },
-        { label: "Recent Activity", value: "+150 pts", unit: "Today", icon: TrendingUp, color: "text-purple-400" },
+        {
+            label: "Total Points",
+            value: userPoints.toLocaleString(),
+            unit: "pts",
+            icon: Coins,
+            color: "text-yellow-400"
+        },
+        {
+            label: "CO₂ Saved",
+            value: user?.wasteStats?.totalWeight
+                ? (user.wasteStats.totalWeight * 0.0025).toFixed(1) // Mock: 2.5kg CO2 per kg waste
+                : "0",
+            unit: "kg",
+            icon: Leaf,
+            color: "text-green-400"
+        },
+        {
+            label: "Waste Recycled",
+            value: user?.wasteStats?.totalWeight
+                ? (user.wasteStats.totalWeight / 1000).toFixed(1)
+                : "0",
+            unit: "kg",
+            icon: Recycle,
+            color: "text-blue-400"
+        },
+        {
+            label: "Bottles & Cans",
+            value: user?.wasteStats
+                ? ((user.wasteStats.plasticBottles || 0) + (user.wasteStats.glassBottles || 0) + (user.wasteStats.aluminumCans || 0)).toString()
+                : "0",
+            unit: "items",
+            icon: TrendingUp,
+            color: "text-purple-400"
+        },
     ];
 
     return (

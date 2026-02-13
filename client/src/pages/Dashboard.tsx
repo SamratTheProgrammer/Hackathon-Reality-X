@@ -8,7 +8,22 @@ import { Footer } from "../components/footer";
 import LenisScroll from "../components/lenis";
 import { Navbar } from "../components/navbar";
 
+import { useNavigate } from "react-router-dom";
+import { useApp } from "../context/AppContext";
+import { useEffect } from "react";
+
 export const Dashboard = () => {
+    const { isAuthenticated } = useApp();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!isAuthenticated) {
+            navigate('/login');
+        }
+    }, [isAuthenticated, navigate]);
+
+    if (!isAuthenticated) return null;
+
     return (
         <>
             <Banner />

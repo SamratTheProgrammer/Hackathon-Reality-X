@@ -47,6 +47,8 @@ const INITIAL_WASTE_TYPES: WasteType[] = [
     { id: '5', name: 'E-Waste (Small)', pointsPerUnit: 30, unit: 'item', icon: 'Cpu', color: 'bg-purple-600' },
 ];
 
+
+
 const MachineContext = createContext<MachineContextType | undefined>(undefined);
 
 export const MachineProvider = ({ children }: { children: ReactNode }) => {
@@ -74,12 +76,28 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const updateCapacity = (newCapacity: number) => {
+    const updateCapacity = async (newCapacity: number) => {
         setCapacity(newCapacity);
+        let status: 'Available' | 'Full' | 'Maintenance' = 'Available';
         if (newCapacity >= 95) {
-            setMachineStatus('Full');
-        } else {
-            setMachineStatus('Available');
+            status = 'Full';
+        }
+        setMachineStatus(status);
+
+        if (isAuthenticated && machineData?.machineId) {
+            try {
+                await fetch('http://localhost:5000/api/machine/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        machineId: machineData.machineId,
+                        capacity: newCapacity,
+                        status
+                    })
+                });
+            } catch (error) {
+                console.error("Failed to sync capacity:", error);
+            }
         }
     };
 
@@ -88,17 +106,27 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const completeTransaction = (items: any[], totalPoints: number) => {
+        // Calculate total weight for debugging/display
+        // The QR code needs to send the items breakdown so the server can calculate and update specific stats
+
+        // Ensure items have wasteId
+        const formattedItems = items.map(item => ({
+            wasteId: item.wasteId || item.id, // Fallback if id is used
+            count: item.count || item.quantity,
+            points: item.points
+        }));
+
         const tx: Transaction = {
             id: `TX-${Date.now().toString().slice(-6)}`,
-            machineId: machineData?.id || 'M-DEMO',
-            items,
+            machineId: machineData?.machineId || 'M-DEMO',
+            items: formattedItems,
             totalPoints,
             timestamp: new Date().toISOString(),
             status: 'Pending'
         };
         setCurrentTransaction(tx);
 
-        // Simulating capacity increase with each transaction
+        // Simulating capacity increase
         updateCapacity(Math.min(100, capacity + 5));
     };
 
@@ -107,31 +135,49 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const login = async (id: string, secret: string) => {
-        // Mock Login
-        // In real app, verify against backend
-        if (id && secret) {
-            const mockData = {
-                id,
-                name: `Machine ${id}`,
-                location: 'Demo Location',
-                type: 'Smart Waste Vending Machine',
-                secret // Storing secret for verification
-            };
-            setMachineData(mockData);
-            setIsAuthenticated(true);
-            localStorage.setItem('machine_auth', JSON.stringify(mockData));
-            return true;
+        try {
+            const response = await fetch('http://localhost:5000/api/machine/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ machineId: id, password: secret })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const machine = data.data;
+                setMachineData(machine);
+                setCapacity(machine.capacity || 0);
+                setMachineStatus(machine.status || 'Available');
+                setIsAuthenticated(true);
+                localStorage.setItem('machine_auth', JSON.stringify(machine));
+                return true;
+            }
+        } catch (error) {
+            console.error("Login Error:", error);
         }
         return false;
     };
 
     const register = async (data: any) => {
-        // Mock Register
-        console.log("Registering machine:", data);
-        setMachineData(data);
-        setIsAuthenticated(true);
-        localStorage.setItem('machine_auth', JSON.stringify(data));
-        return true;
+        try {
+            const response = await fetch('http://localhost:5000/api/machine/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const resData = await response.json();
+
+            if (resData.success) {
+                const machine = resData.data;
+                setMachineData(machine);
+                setIsAuthenticated(true);
+                localStorage.setItem('machine_auth', JSON.stringify(machine));
+                return true;
+            }
+        } catch (error) {
+            console.error("Register Error:", error);
+        }
+        return false;
     };
 
     const logout = () => {

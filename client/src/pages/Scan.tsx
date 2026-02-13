@@ -1,13 +1,15 @@
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import { Camera, CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
+import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 export const Scan = () => {
     const navigate = useNavigate();
-    const { addTransaction } = useApp();
+    const { addTransaction, isAuthenticated } = useApp();
+    const [manualCode, setManualCode] = useState("");
     const [scanning, setScanning] = useState(true);
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState("");
@@ -20,7 +22,11 @@ export const Scan = () => {
             id: `TX-${Date.now().toString().slice(-6)}`,
             points: 150,
             machineId: "M402",
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            items: [
+                { wasteId: '1', count: 5, points: 50 }, // 5 Plastic Bottles
+                { wasteId: '3', count: 10, points: 120 } // 10 Cans
+            ]
         };
 
         processScan(JSON.stringify(mockData));
@@ -28,7 +34,25 @@ export const Scan = () => {
 
     const processScan = (dataString: string) => {
         try {
-            const data = JSON.parse(dataString);
+            // Check if it's a JSON string
+            let data;
+            if (dataString.trim().startsWith('{')) {
+                data = JSON.parse(dataString);
+            } else if (dataString.startsWith('TX-')) {
+                // Handle manual code that isn't JSON
+                data = {
+                    id: dataString,
+                    points: 150, // Default for manual entry simulation
+                    machineId: "Manual",
+                    timestamp: new Date().toISOString(),
+                    items: [
+                        { wasteId: '1', count: 5, points: 50 }, // 5 Plastic Bottles
+                        { wasteId: '3', count: 10, points: 120 } // 10 Cans
+                    ]
+                };
+            } else {
+                throw new Error("Invalid format");
+            }
 
             // Basic Validation
             if (!data.id || !data.points) {
@@ -44,18 +68,90 @@ export const Scan = () => {
             addTransaction({
                 id: data.id,
                 machineId: data.machineId || "Unknown",
-                userId: "user-1",
-                items: [], // Details might not be in QR to save space, or fetched from ID
+                userId: "user-1", // This will be handled by context
+                items: data.items || [], // Capture items from QR
                 totalPoints: data.points,
                 timestamp: data.timestamp || new Date().toISOString(),
                 status: 'Completed'
             });
 
         } catch (err) {
-            setError("Invalid QR Code. Please try again.");
+            setError("Invalid Code. Please try again.");
             setTimeout(() => setError(""), 3000);
         }
     };
+
+    const handleManualSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!manualCode.trim()) return;
+
+        // Try to parse as JSON if they pasted the raw JSON, otherwise treat as ID
+        try {
+            // fast fail if it doesn't look like JSON
+            if (!manualCode.trim().startsWith('{')) {
+                throw new Error("Not JSON");
+            }
+            processScan(manualCode);
+        } catch {
+            // Assume it is just the ID, we need to mock the rest for now or handle it on backend
+            // For this demo, let's reconstruct the object if they assume they just type the ID
+            // But the current processScan expects a JSON string with points. 
+            // Let's assume the user enters the ID "TX-..." and we look it up (simulated).
+
+            // Simulation: If they enter a code starting with TX, valid.
+            if (manualCode.startsWith('TX-')) {
+                const mockData = {
+                    id: manualCode,
+                    points: 150, // Default for manual entry simulation
+                    machineId: "Manual",
+                    timestamp: new Date().toISOString()
+                };
+                processScan(JSON.stringify(mockData));
+            } else {
+                setError("Invalid code format. Must start with TX-");
+                setTimeout(() => setError(""), 3000);
+            }
+        }
+    };
+
+    const [scannerInitialized, setScannerInitialized] = useState(false);
+
+    useEffect(() => {
+        if (scanning && isAuthenticated && !scannerInitialized) {
+            // Dynamically import to avoid SSR issues if any, though regular import is fine in Vite
+            import("html5-qrcode").then(({ Html5QrcodeScanner }) => {
+                // Slight delay to ensure DOM is ready
+                setTimeout(() => {
+                    const scanner = new Html5QrcodeScanner(
+                        "reader",
+                        {
+                            fps: 10,
+                            qrbox: { width: 250, height: 250 },
+                            aspectRatio: 1.0,
+                            showTorchButtonIfSupported: true
+                        },
+                        /* verbose= */ false
+                    );
+
+                    scanner.render(
+                        (decodedText) => {
+                            console.log("Scan success:", decodedText);
+                            scanner.clear();
+                            setScannerInitialized(false);
+                            processScan(decodedText);
+                        },
+                        (_) => {
+                            // parse error, ignore typical scanning errors
+                        }
+                    );
+                    setScannerInitialized(true);
+                }, 100);
+            });
+        }
+    }, [scanning, isAuthenticated, scannerInitialized]);
+
+    // Cleanup not fully handled here because Html5QrcodeScanner is tricky to cleanup in React strict mode hooks without ref
+    // For hackathon, strict mode might double render but we added scannerInitialized check.
 
     return (
         <>
@@ -64,13 +160,32 @@ export const Scan = () => {
                 {/* Background scanning effect */}
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(34,197,94,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(34,197,94,0.05)_1px,transparent_1px)] bg-[size:100px_100px] opacity-20 pointer-events-none"></div>
 
-                {scanning ? (
+                {!isAuthenticated ? (
                     <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-3xl p-8 flex flex-col items-center text-center relative z-10 shadow-2xl">
-                        <div className="mb-6 relative">
-                            <div className="size-64 bg-black rounded-2xl border-2 border-gray-700 flex items-center justify-center overflow-hidden relative">
-                                <Camera className="size-12 text-gray-600 animate-pulse" />
-                                {/* Scanning Line Animation */}
-                                <div className="absolute top-0 left-0 w-full h-1 bg-green-500 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-[scan_2s_linear_infinite]"></div>
+                        <div className="size-20 bg-gray-800 rounded-full flex items-center justify-center text-gray-400 mb-6">
+                            <Camera className="size-10" />
+                        </div>
+                        <h2 className="text-2xl font-bold mb-2">Login Required</h2>
+                        <p className="text-gray-400 mb-8">Please login to scan QR codes and earn points.</p>
+                        <div className="flex gap-4 w-full">
+                            <SignInButton mode="modal">
+                                <button className="flex-1 bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-xl font-bold transition-all">
+                                    Sign In
+                                </button>
+                            </SignInButton>
+                            <SignUpButton mode="modal">
+                                <button className="flex-1 bg-primary hover:bg-green-400 text-black px-6 py-3 rounded-xl font-bold transition-all">
+                                    Sign Up
+                                </button>
+                            </SignUpButton>
+                        </div>
+                    </div>
+                ) : scanning ? (
+                    <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-3xl p-8 flex flex-col items-center text-center relative z-10 shadow-2xl">
+                        <div className="mb-6 relative w-full flex justify-center">
+                            {/* Scanner Container */}
+                            <div id="reader" className="w-full max-w-[350px] overflow-hidden rounded-2xl border-2 border-primary/50 bg-black">
+                                {/* The library injects UI here */}
                             </div>
                         </div>
 
@@ -85,14 +200,29 @@ export const Scan = () => {
 
                         <button
                             onClick={handleSimulateScan}
-                            className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all border border-gray-700 w-full mb-4"
+                            className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all border border-gray-700 w-full mb-8"
                         >
                             Simulate Scan (Debug)
                         </button>
 
-                        <p className="text-xs text-gray-500">
-                            Align the code within the frame to scan automatically.
-                        </p>
+                        <div className="w-full border-t border-gray-800 pt-6">
+                            <p className="text-sm text-gray-400 mb-4">Camera not working? Enter code manually:</p>
+                            <form onSubmit={handleManualSubmit} className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Enter code (e.g., TX-123...)"
+                                    value={manualCode}
+                                    onChange={(e) => setManualCode(e.target.value)}
+                                    className="flex-1 bg-black border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-primary"
+                                />
+                                <button
+                                    type="submit"
+                                    className="bg-primary hover:bg-green-400 text-black font-bold px-4 py-2 rounded-lg transition-colors"
+                                >
+                                    Submit
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 ) : (
                     <div className="w-full max-w-md bg-gray-900 border border-green-500/30 rounded-3xl p-8 flex flex-col items-center text-center relative z-10 shadow-[0_0_50px_rgba(34,197,94,0.1)] animate-in zoom-in duration-300">

@@ -10,6 +10,7 @@ import { Locate } from "./pages/Locate";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { AdminLogin } from "./pages/AdminLogin";
+import { Community } from "./pages/Community";
 
 // Admin Imports
 import { AdminLayout } from "./layouts/AdminLayout";
@@ -55,6 +56,7 @@ function App() {
                     <Route path="/scan" element={<Scan />} />
                     <Route path="/redeem" element={<Redeem />} />
                     <Route path="/locate" element={<Locate />} />
+                    <Route path="/community" element={<Community />} />
 
                     {/* Admin Routes */}
                     <Route path="/admin" element={

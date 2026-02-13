@@ -45,7 +45,11 @@ export const MachineSummary = () => {
 
             <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl flex flex-col items-center gap-4 shadow-2xl max-w-sm w-full mx-auto shrink-0">
                 <div className="bg-white p-3 rounded-lg">
-                    <QRCode value={JSON.stringify({ id: currentTransaction.id, points: currentTransaction.totalPoints })} size={140} />
+                    <QRCode value={JSON.stringify({
+                        id: currentTransaction.id,
+                        points: currentTransaction.totalPoints,
+                        items: currentTransaction.items
+                    })} size={140} />
                 </div>
 
                 <div className="flex flex-col items-center">
