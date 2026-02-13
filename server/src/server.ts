@@ -23,10 +23,10 @@ app.use(cors());
 // Best practice for robust webhook handling is often to mount it first or explicitly on the route.
 // Our webhooks.ts mounts it on the route.
 
-app.use(express.json());
-
-// Routes
+// Webhooks (must be before body-parser json to get raw body for signature verification)
 app.use('/api/webhooks', webhookRoutes);
+
+app.use(express.json());
 
 app.get('/', (req, res) => {
     res.send('Reality-X Server is Running');
