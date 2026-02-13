@@ -2,10 +2,11 @@
     "name": "reality-x-server",
     "version": "1.0.0",
     "description": "Backend for Reality-X Hackathon Project",
-    "main": "dist/index.js",
+    "main": "dist/server.js",
     "scripts": {
-        "start": "node dist/index.js",
-        "dev": "nodemon src/index.ts",
+        "start": "node dist/server.js",
+        "server": "nodemon src/server.ts",
+        "dev": "nodemon src/server.ts",
         "build": "tsc"
     },
     "keywords": [],
@@ -16,7 +17,7 @@
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
-        "mongoose": "^8.3.4",
+        "mongoose": "^8.23.0",
         "svix": "^1.24.0"
     },
     "devDependencies": {
