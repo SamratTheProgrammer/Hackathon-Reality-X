@@ -17,27 +17,32 @@ export const Footer = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                             <h4 className="font-urbanist text-lg/8 font-semibold">
-                                Product
+                                Features
                             </h4>
                             <ul className="mt-3">
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        About
+                                    <a href="/dashboard" className="hover:underline">
+                                        Dashboard
                                     </a>
                                 </li>
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        Features
+                                    <a href="/scan" className="hover:underline">
+                                        Scan Waste
                                     </a>
                                 </li>
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        Pricing
+                                    <a href="/redeem" className="hover:underline">
+                                        Redeem Rewards
                                     </a>
                                 </li>
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        Docs
+                                    <a href="/locate" className="hover:underline">
+                                        Locate Machines
+                                    </a>
+                                </li>
+                                <li className="text-sm/7 text-gray-500">
+                                    <a href="/community" className="hover:underline">
+                                        Community
                                     </a>
                                 </li>
                             </ul>
@@ -48,23 +53,23 @@ export const Footer = () => {
                             </h4>
                             <ul className="mt-3">
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        About
+                                    <a href="/#testimonials" className="hover:underline">
+                                        About Us
                                     </a>
                                 </li>
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        Careers
+                                    <a href="https://www.instagram.com/__itzsamrat__/" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                        Contact
                                     </a>
                                 </li>
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        Press
+                                    <a href="/login" className="hover:underline">
+                                        Login
                                     </a>
                                 </li>
                                 <li className="text-sm/7 text-gray-500">
-                                    <a href="#" className="hover:underline">
-                                        Partners
+                                    <a href="/signup" className="hover:underline">
+                                        Sign Up
                                     </a>
                                 </li>
                                 <li className="text-sm/7 text-gray-500">

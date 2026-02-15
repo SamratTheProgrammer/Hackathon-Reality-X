@@ -2,7 +2,6 @@ import { SectionTitle } from "../components/section-title";
 import { testimonials } from "../data/testimonials";
 import { ArrowRightIcon, StarIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
 export const TestimonialSection = () => {
     const [autoPlay, setAutoPlay] = useState(true);
@@ -19,12 +18,13 @@ export const TestimonialSection = () => {
     }, [autoPlay]);
 
     return (
-        <div className="mt-30 border-y border-gray-800">
+        <div id="testimonials" className="mt-30 border-y border-gray-800">
             <div className="p-6 md:p-24">
                 <SectionTitle
-                    title="Community Stories."
-                    description="Hear from our users who are making a real difference in their communities by recycling smarter."
+                    title="Our Stories"
+                    description="Discover how our users are creating real impact in their communities by recycling smarter, earning rewards, and promoting a cleaner future."
                     leftAlign
+
                 />
             </div>
 
@@ -73,10 +73,15 @@ export const TestimonialSection = () => {
                         {testimonial.quote}
                     </p>
 
-                    <Link to="/" className="mt-8">
-                        Read more
+                    <a
+                        href={`https://www.instagram.com/${testimonial.handle.replace('@', '')}/`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-8 inline-flex items-center hover:text-blue-400 transition-colors"
+                    >
+                        Follow for more
                         <ArrowRightIcon className="inline-block size-4 ml-1" />
-                    </Link>
+                    </a>
                 </div>
             </div>
         </div>
