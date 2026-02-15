@@ -1,24 +1,34 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMachine } from "../context/MachineContext";
 import { PasswordModal } from "../components/PasswordModal";
 import { LogOut } from "lucide-react";
 
 export const MachineLayout = () => {
-    const { logout, machineData } = useMachine();
+    const { logout, machineData, isAuthenticated, isLoading } = useMachine();
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!isLoading && !isAuthenticated) {
+            navigate('/machine-signup');
+        }
+    }, [isLoading, isAuthenticated, navigate]);
 
     const handleLogout = (password: string) => {
         // Verify against machine password
         if (password === machineData?.password) {
             logout();
             setIsLogoutModalOpen(false);
-            navigate('/machine-login');
+            navigate('/machine-login'); // Or signup
         } else {
-            alert("Incorrect Password"); // Simple alert for now, could be improved
+            alert("Incorrect Password");
         }
     };
+
+    if (isLoading) {
+        return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading System...</div>;
+    }
 
     return (
         <div className="min-h-screen bg-zinc-950 text-white font-urbanist selection:bg-primary selection:text-black overflow-hidden relative">

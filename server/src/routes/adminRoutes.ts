@@ -65,6 +65,54 @@ router.get('/stats/weekly-activity', async (_req, res) => {
     }
 });
 
+// GET /api/admin/stats/waste-distribution
+router.get('/stats/waste-distribution', async (_req, res) => {
+    try {
+        const stats = await Transaction.aggregate([
+            { $unwind: "$items" },
+            {
+                $group: {
+                    _id: "$items.wasteId",
+                    count: { $sum: "$items.count" }
+                }
+            },
+            {
+                $addFields: {
+                    wasteIdObj: { $toObjectId: "$_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "wastetypes",
+                    localField: "wasteIdObj",
+                    foreignField: "_id",
+                    as: "wasteType"
+                }
+            },
+            { $unwind: "$wasteType" },
+            {
+                $project: {
+                    label: "$wasteType.name",
+                    color: "$wasteType.color",
+                    count: 1
+                }
+            }
+        ]);
+
+        const total = stats.reduce((acc, curr) => acc + curr.count, 0) || 1;
+        const distribution = stats.map(s => ({
+            label: s.label,
+            count: s.count,
+            val: Math.round((s.count / total) * 100),
+            color: s.color || 'bg-gray-500'
+        }));
+
+        res.json({ success: true, data: distribution });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // --- Machines ---
 
 // POST /api/admin/machine/deactivate
