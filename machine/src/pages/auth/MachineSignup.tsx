@@ -1,7 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useMachine } from "../../context/MachineContext";
-import { MapPin, Server, Shield, CheckCircle, ArrowRight, Loader2 } from "lucide-react";
+import { MapPin, Server, Shield, CheckCircle, ArrowRight, Loader2, Search } from "lucide-react";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icon
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Helper to update map view when coords change
+const ChangeView = ({ center }: { center: [number, number] }) => {
+    const map = useMap();
+    useEffect(() => {
+        map.setView(center);
+    }, [center, map]);
+    return null;
+};
+
+// Helper to handle map clicks
+const LocationMarker = ({ setFormData }: { setFormData: any }) => {
+    const map = useMapEvents({
+        async click(e) {
+            const { lat, lng } = e.latlng;
+            try {
+                // Show loading state or temporary coords while fetching
+                setFormData((prev: any) => ({
+                    ...prev,
+                    lat: lat.toString(),
+                    lng: lng.toString(),
+                    location: "Fetching address..."
+                }));
+
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const data = await res.json();
+
+                setFormData((prev: any) => ({
+                    ...prev,
+                    location: data.display_name || `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
+                }));
+            } catch (error) {
+                setFormData((prev: any) => ({
+                    ...prev,
+                    location: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
+                }));
+            }
+            map.flyTo(e.latlng, map.getZoom());
+        },
+    });
+    return null;
+};
 
 export const MachineSignup = () => {
     const { register } = useMachine();
@@ -29,28 +87,76 @@ export const MachineSignup = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const [searching, setSearching] = useState(false);
+
     const handleGetLocation = () => {
         setGettingLocation(true);
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setFormData(prev => ({
-                        ...prev,
-                        lat: position.coords.latitude.toString(),
-                        lng: position.coords.longitude.toString(),
-                        location: `Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`
-                    }));
+                async (position) => {
+                    const { latitude, longitude } = position.coords;
+
+                    // Optional: Reverse geocode to get address from coords
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                        const data = await res.json();
+                        setFormData(prev => ({
+                            ...prev,
+                            lat: latitude.toString(),
+                            lng: longitude.toString(),
+                            location: data.display_name || `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`
+                        }));
+                    } catch (e) {
+                        setFormData(prev => ({
+                            ...prev,
+                            lat: latitude.toString(),
+                            lng: longitude.toString(),
+                            location: `Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)}`
+                        }));
+                    }
                     setGettingLocation(false);
                 },
                 (error) => {
                     console.error("Error getting location:", error);
-                    setError("Failed to get location. Please enter manually.");
+                    let msg = "Failed to get location.";
+                    if (error.code === error.TIMEOUT) msg = "Location request timed out.";
+                    else if (error.code === error.PERMISSION_DENIED) msg = "Location permission denied.";
+
+                    setError(msg);
                     setGettingLocation(false);
-                }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         } else {
             setError("Geolocation not supported");
             setGettingLocation(false);
+        }
+    };
+
+    const handleSearchLocation = async () => {
+        if (!formData.location) return;
+        setSearching(true);
+        setError('');
+
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.location)}`);
+            const data = await res.json();
+
+            if (data && data.length > 0) {
+                const first = data[0];
+                setFormData(prev => ({
+                    ...prev,
+                    lat: first.lat,
+                    lng: first.lon,
+                    location: first.display_name // Update to full name
+                }));
+            } else {
+                setError("Location not found. Try a different query.");
+            }
+        } catch (err) {
+            setError("Failed to search location.");
+        } finally {
+            setSearching(false);
         }
     };
 
@@ -214,29 +320,66 @@ export const MachineSignup = () => {
 
                         <div>
                             <label className="block text-sm font-medium text-gray-500 mb-1">Location Address</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    name="location"
-                                    value={formData.location}
-                                    onChange={handleChange}
-                                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:border-green-500 focus:outline-none transition-colors"
-                                    placeholder="Click button or enter address"
-                                />
+                            <div className="flex gap-2 mb-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="text"
+                                        name="location"
+                                        value={formData.location}
+                                        onChange={handleChange}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSearchLocation();
+                                            }
+                                        }}
+                                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white focus:border-green-500 focus:outline-none transition-colors pr-10"
+                                        placeholder="Enter city or address..."
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleSearchLocation}
+                                        disabled={searching || !formData.location}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-white"
+                                    >
+                                        {searching ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                                    </button>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={handleGetLocation}
                                     disabled={gettingLocation}
                                     className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-xl border border-gray-700 transition-colors"
-                                    title="Get Current Location"
+                                    title="User Current Location"
                                 >
                                     {gettingLocation ? <Loader2 className="w-6 h-6 animate-spin" /> : <MapPin className="w-6 h-6" />}
                                 </button>
                             </div>
-                            {formData.lat && (
-                                <p className="text-xs text-green-500 mt-1">
-                                    Coords captured: {parseFloat(formData.lat).toFixed(4)}, {parseFloat(formData.lng).toFixed(4)}
-                                </p>
+
+                            {/* Interactive Map - Shows only when coords are present */}
+                            {(formData.lat && formData.lng) && (
+                                <div className="animate-in fade-in zoom-in duration-300">
+                                    <div className="h-48 w-full rounded-xl overflow-hidden border border-gray-800 mb-2 relative z-0">
+                                        <MapContainer
+                                            center={[parseFloat(formData.lat), parseFloat(formData.lng)]}
+                                            zoom={15}
+                                            className="h-full w-full"
+                                            style={{ height: '100%', width: '100%', background: '#111827' }}
+                                        >
+                                            <TileLayer
+                                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                            />
+                                            <ChangeView center={[parseFloat(formData.lat), parseFloat(formData.lng)]} />
+                                            <Marker position={[parseFloat(formData.lat), parseFloat(formData.lng)]} />
+                                            <LocationMarker setFormData={setFormData} />
+                                        </MapContainer>
+                                    </div>
+                                    <p className="text-xs text-center text-gray-500 mb-4">
+                                        Confirming location: <span className="text-green-500">{formData.lat.substring(0, 7)}, {formData.lng.substring(0, 7)}</span>
+                                        <br />Drag or click map to adjust.
+                                    </p>
+                                </div>
                             )}
                         </div>
                     </div>

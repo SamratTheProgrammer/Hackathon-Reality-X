@@ -1,7 +1,64 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
-import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle, Power, Eye, EyeOff } from "lucide-react";
+import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle, Power, Eye, EyeOff, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icon
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Helper to update map view when coords change
+const ChangeView = ({ center }: { center: [number, number] }) => {
+    const map = useMap();
+    useEffect(() => {
+        map.setView(center);
+    }, [center, map]);
+    return null;
+};
+
+// Helper to handle map clicks
+const LocationMarker = ({ setFormData }: { setFormData: any }) => {
+    const map = useMapEvents({
+        async click(e) {
+            const { lat, lng } = e.latlng;
+            try {
+                setFormData((prev: any) => ({
+                    ...prev,
+                    lat: lat.toString(),
+                    lng: lng.toString(),
+                    address: "Fetching address..."
+                }));
+
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const data = await res.json();
+
+                setFormData((prev: any) => ({
+                    ...prev,
+                    address: data.display_name || `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
+                }));
+            } catch (error) {
+                setFormData((prev: any) => ({
+                    ...prev,
+                    address: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
+                }));
+            }
+            map.flyTo(e.latlng, map.getZoom());
+        },
+    });
+    return null;
+};
 
 export const AdminMachines = () => {
     // Use machines from context which is now dynamic
@@ -224,7 +281,7 @@ export const AdminMachines = () => {
                                     <p className="text-xs text-gray-500 font-mono">ID: {machine.id}</p>
                                     <div className="flex items-center gap-1 bg-gray-800 px-2 py-0.5 rounded text-xs">
                                         <span className="text-gray-400 font-mono">
-                                            {visiblePasswords[machine.id] ? machine.password : '••••••••'}
+                                            {visiblePasswords[machine.id] ? (machine as any).password : '••••••••'}
                                         </span>
                                         <button
                                             onClick={() => togglePassword(machine.id)}
@@ -341,7 +398,7 @@ export const AdminMachines = () => {
             {/* Registration/Edit Modal */}
             {showForm && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg p-6">
+                    <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
                         <h2 className="text-xl font-bold mb-4">{editMode ? 'Edit Machine Details' : 'Register New Machine'}</h2>
                         <form onSubmit={handleFormSubmit} className="space-y-4">
                             {editMode && (
@@ -377,13 +434,24 @@ export const AdminMachines = () => {
                             </div>
                             <div>
                                 <label className="block text-sm text-gray-400 mb-1">Location Address</label>
-                                <input
-                                    required
-                                    className="w-full bg-black border border-gray-700 rounded-lg p-2 focus:border-primary outline-none text-white"
-                                    value={formData.address}
-                                    onChange={e => setFormData({ ...formData, address: e.target.value })}
-                                    placeholder="Full street address"
-                                />
+                                <div className="flex gap-2">
+                                    <input
+                                        required
+                                        className="w-full bg-black border border-gray-700 rounded-lg p-2 focus:border-primary outline-none text-white"
+                                        value={formData.address}
+                                        onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                        placeholder="Full street address"
+                                    />
+                                    {/* Add Search Button for Admin too if desired, or just rely on manual entry + map click. 
+                                        User said "after search... open map". 
+                                        I'll assume admin manually enters or uses map. 
+                                        But to be safe, let's just make the map always visible or conditional?
+                                        "fix it also into admin" might mean the map behavior.
+                                        I'll make the map always visible in Admin as it's an edit form, but update the "Search" capability if I can.
+                                        For now, I'll stick to making it Scrollable (done) and ensuring the Map works.
+                                        To fix the 'mini' aspect, I'll keep it fixed height.
+                                    */}
+                                </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -408,12 +476,26 @@ export const AdminMachines = () => {
                                 </div>
                             </div>
 
-                            {/* Simulating Map Picker */}
-                            <div className="bg-gray-800 h-32 rounded-lg flex items-center justify-center text-gray-500 text-sm cursor-pointer hover:bg-gray-700 transition"
-                                onClick={() => setFormData({ ...formData, lat: "19.0760", lng: "72.8777", address: "Pinned Location (Simulated)" })}
-                            >
-                                <MapPin className="size-4 mr-2" /> Click to Simulate Pin Drop
+                            {/* Interactive Map - Always visible in Admin for precision editing */}
+                            <div className="h-64 rounded-lg overflow-hidden border border-gray-700 relative z-0">
+                                <MapContainer
+                                    center={formData.lat && formData.lng ? [parseFloat(formData.lat), parseFloat(formData.lng)] : [40.7128, -74.0060]}
+                                    zoom={13}
+                                    className="h-full w-full"
+                                    style={{ height: '100%', width: '100%', background: '#000' }}
+                                >
+                                    <TileLayer
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    />
+                                    <ChangeView center={formData.lat && formData.lng ? [parseFloat(formData.lat), parseFloat(formData.lng)] : [40.7128, -74.0060]} />
+                                    {formData.lat && formData.lng && (
+                                        <Marker position={[parseFloat(formData.lat), parseFloat(formData.lng)]} />
+                                    )}
+                                    <LocationMarker setFormData={setFormData} />
+                                </MapContainer>
                             </div>
+                            <p className="text-xs text-center text-gray-500 mt-2">Click on map to exact pin location</p>
 
                             <div className="flex gap-4 pt-4">
                                 <button
