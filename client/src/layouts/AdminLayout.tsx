@@ -16,12 +16,26 @@ export const AdminLayout = () => {
         navigate('/login');
     };
 
+    const [visitedPages, setVisitedPages] = useState<string[]>(() => {
+        const saved = localStorage.getItem('adminVisitedPages');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    const handleNavClick = (path: string) => {
+        setIsMobileOpen(false);
+        if (!visitedPages.includes(path)) {
+            const newVisited = [...visitedPages, path];
+            setVisitedPages(newVisited);
+            localStorage.setItem('adminVisitedPages', JSON.stringify(newVisited));
+        }
+    };
+
     const menu = [
         { name: "Dashboard", icon: LayoutDashboard, path: "/admin" },
         { name: "Machines", icon: Zap, path: "/admin/machines" },
         { name: "Users", icon: Users, path: "/admin/users" },
         { name: "Waste Rules", icon: Trash2, path: "/admin/waste-rules" },
-        { name: "Rewards", icon: Zap, path: "/admin/rewards" },
+        { name: "Rewards", icon: Zap, path: "/admin/rewards", alert: true }, // Alert for new redemptions
         { name: "Analytics", icon: BarChart, path: "/admin/analytics" },
     ];
 
@@ -65,24 +79,36 @@ export const AdminLayout = () => {
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
                     {menu.map((item) => {
                         const isActive = location.pathname === item.path;
+                        // @ts-ignore
+                        const showAlert = item.alert && !visitedPages.includes(item.path);
+
                         return (
                             <Link
                                 key={item.path}
                                 to={item.path}
-                                onClick={() => setIsMobileOpen(false)}
+                                onClick={() => handleNavClick(item.path)}
                                 title={isCollapsed && !isMobileOpen ? item.name : ''}
-                                className={`flex items-center ${isCollapsed && !isMobileOpen ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-xl transition-all ${isActive
+                                className={`flex items-center ${isCollapsed && !isMobileOpen ? 'justify-center' : 'gap-3'} px-4 py-3 rounded-xl transition-all relative ${isActive
                                     ? "bg-primary/20 text-primary font-bold"
                                     : "text-gray-400 hover:bg-gray-800 hover:text-white"
                                     }`}
                             >
                                 <item.icon className="size-5 shrink-0" />
                                 {/* Show text if Mobile OR Not Collapsed */}
-                                {(isMobileOpen || !isCollapsed) && <span className="whitespace-nowrap">{item.name}</span>}
+                                {(isMobileOpen || !isCollapsed) && (
+                                    <div className="flex-1 flex justify-between items-center">
+                                        <span className="whitespace-nowrap">{item.name}</span>
+                                        {showAlert && <span className="size-2 bg-red-500 rounded-full animate-pulse"></span>}
+                                    </div>
+                                )}
+                                {/* Show dot overlay if Collapsed */}
+                                {(isCollapsed && !isMobileOpen && showAlert) && (
+                                    <span className="absolute top-2 right-2 size-2 bg-red-500 rounded-full border border-black"></span>
+                                )}
                             </Link>
                         );
                     })}
-                </nav>
+                </nav >
                 <div className="p-4 border-t border-gray-800">
                     <button
                         onClick={handleLogout}
@@ -93,10 +119,10 @@ export const AdminLayout = () => {
                         {(isMobileOpen || !isCollapsed) && <span className="whitespace-nowrap">Exit Admin</span>}
                     </button>
                 </div>
-            </aside>
+            </aside >
 
             {/* Content Area */}
-            <div className="flex-1 flex flex-col min-w-0">
+            < div className="flex-1 flex flex-col min-w-0" >
                 <header className="h-16 border-b border-gray-800 flex items-center justify-between px-6 bg-black/80 backdrop-blur-md sticky top-0 z-30">
                     <div className="flex items-center gap-4">
                         {/* Mobile Menu Toggle */}
@@ -121,7 +147,7 @@ export const AdminLayout = () => {
                 <main className="flex-1 p-6 overflow-auto">
                     <Outlet />
                 </main>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };

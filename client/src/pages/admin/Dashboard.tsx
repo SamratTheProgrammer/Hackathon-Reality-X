@@ -6,8 +6,12 @@ export const AdminDashboard = () => {
     const { backendUrl } = useApp();
     const [stats, setStats] = useState({
         totalMachines: 0,
+        availableMachines: 0,
+        maintenanceMachines: 0,
         totalTransactions: 0,
-        activeUsers: 0
+        activeUsers: 0,
+        activeRewards: 0,
+        activeWasteTypes: 0
     });
 
     useEffect(() => {
@@ -30,9 +34,26 @@ export const AdminDashboard = () => {
                 }
 
                 if (dataMachines.success) {
+                    const machines = dataMachines.data;
+                    const available = machines.filter((m: any) => m.status === 'Available').length;
+                    const maintenance = machines.filter((m: any) => m.status === 'Maintenance').length;
+
                     setStats(prev => ({
                         ...prev,
-                        totalMachines: dataMachines.data.length
+                        totalMachines: machines.length,
+                        availableMachines: available,
+                        maintenanceMachines: maintenance
+                    }));
+                }
+
+                // 3. Fetch Rewards & Waste Stats
+                const resRewards = await fetch(`${backendUrl}/api/admin/stats/rewards`);
+                const dataRewards = await resRewards.json();
+                if (dataRewards.success) {
+                    setStats(prev => ({
+                        ...prev,
+                        activeRewards: dataRewards.data.activeRewardsCount,
+                        activeWasteTypes: dataRewards.data.activeWasteTypesCount
                     }));
                 }
 
@@ -48,10 +69,19 @@ export const AdminDashboard = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">Overview</h1>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* ... previous content ... */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
                     <h3 className="text-gray-400 text-sm">Total Machines</h3>
                     <p className="text-3xl font-bold mt-2">{stats.totalMachines}</p>
+                </div>
+                <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
+                    <h3 className="text-gray-400 text-sm">Available Machines</h3>
+                    <p className="text-3xl font-bold mt-2 text-green-500">{stats.availableMachines}</p>
+                </div>
+                <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
+                    <h3 className="text-gray-400 text-sm">In Maintenance</h3>
+                    <p className="text-3xl font-bold mt-2 text-red-500">{stats.maintenanceMachines}</p>
                 </div>
                 <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
                     <h3 className="text-gray-400 text-sm">Total Items Recycled</h3>
@@ -60,6 +90,14 @@ export const AdminDashboard = () => {
                 <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
                     <h3 className="text-gray-400 text-sm">Active Users</h3>
                     <p className="text-3xl font-bold mt-2 text-blue-500">{stats.activeUsers}</p>
+                </div>
+                <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
+                    <h3 className="text-gray-400 text-sm">Active Rewards</h3>
+                    <p className="text-3xl font-bold mt-2 text-yellow-500">{stats.activeRewards}</p>
+                </div>
+                <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
+                    <h3 className="text-gray-400 text-sm">Waste Types</h3>
+                    <p className="text-3xl font-bold mt-2 text-purple-500">{stats.activeWasteTypes}</p>
                 </div>
             </div>
 

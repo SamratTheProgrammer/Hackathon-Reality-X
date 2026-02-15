@@ -21,6 +21,54 @@ router.get('/users', async (_req, res) => {
 
 // --- Stats ---
 
+// GET /api/admin/stats/rewards
+router.get('/stats/rewards', async (_req, res) => {
+    try {
+        const activeRewardsCount = await Reward.countDocuments({ isActive: true });
+        const activeWasteTypesCount = await WasteType.countDocuments({ isActive: true });
+
+        // Aggregate total redemptions across all users
+        const redemptionsAgg = await User.aggregate([
+            { $unwind: "$redemptions" },
+            { $count: "totalRedemptions" }
+        ]);
+        const totalRedemptions = redemptionsAgg[0]?.totalRedemptions || 0;
+
+        res.json({ success: true, data: { activeRewardsCount, totalRedemptions, activeWasteTypesCount } });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// GET /api/admin/redemptions (History)
+router.get('/redemptions', async (_req, res) => {
+    try {
+        const users = await User.find({ 'redemptions.0': { $exists: true } }, 'name email redemptions');
+
+        let allRedemptions: any[] = [];
+        users.forEach(user => {
+            user.redemptions.forEach((r: any) => {
+                allRedemptions.push({
+                    id: r._id,
+                    userName: user.name,
+                    userEmail: user.email, // Optional, if needed
+                    rewardName: r.rewardName,
+                    cost: r.cost,
+                    date: r.createdAt,
+                    code: r.code
+                });
+            });
+        });
+
+        // Sort by date desc
+        allRedemptions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        res.json({ success: true, data: allRedemptions });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // GET /api/admin/stats/weekly-activity
 router.get('/stats/weekly-activity', async (_req, res) => {
     try {
