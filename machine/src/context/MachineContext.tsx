@@ -57,7 +57,7 @@ export const MachineProvider = ({ children }: { children: ReactNode }) => {
     const [machineData, setMachineData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const backendUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_SERVER_URL || 'https://reality-x-server.vercel.app';
 
     // Load from local storage on mount & Fetch Waste Types
     useEffect(() => {

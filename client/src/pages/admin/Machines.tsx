@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
-import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle, Power } from "lucide-react";
+import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle, Power, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 export const AdminMachines = () => {
@@ -8,6 +8,14 @@ export const AdminMachines = () => {
     const { machines, setMachines, backendUrl } = useApp();
     const [showForm, setShowForm] = useState(false);
     const [filter, setFilter] = useState("All");
+    const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+
+    const togglePassword = (id: string) => {
+        setVisiblePasswords(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
 
     // Let's implement a refresh helper here that updates context if needed
     // or just rely on context. For now, let's keep a manual refresh 
@@ -27,7 +35,8 @@ export const AdminMachines = () => {
                     capacity: m.capacity,
                     isActive: m.isActive,
                     lastActivity: new Date(m.lastActivity).toLocaleString(),
-                    installDate: new Date(m.createdAt || Date.now()).toLocaleDateString()
+                    installDate: new Date(m.createdAt || Date.now()).toLocaleDateString(),
+                    password: m.password
                 }));
                 setMachines(mappedMachines);
             }
@@ -211,7 +220,21 @@ export const AdminMachines = () => {
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h3 className="font-bold text-lg">{machine.name}</h3>
-                                <p className="text-xs text-gray-500 font-mono">ID: {machine.id}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <p className="text-xs text-gray-500 font-mono">ID: {machine.id}</p>
+                                    <div className="flex items-center gap-1 bg-gray-800 px-2 py-0.5 rounded text-xs">
+                                        <span className="text-gray-400 font-mono">
+                                            {visiblePasswords[machine.id] ? machine.password : '••••••••'}
+                                        </span>
+                                        <button
+                                            onClick={() => togglePassword(machine.id)}
+                                            className="ml-1 text-gray-500 hover:text-white"
+                                            title={visiblePasswords[machine.id] ? "Hide Secret" : "Show Secret"}
+                                        >
+                                            {visiblePasswords[machine.id] ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             {!machine.isActive ? (

@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User';
 import Machine from '../models/Machine';
+import Transaction from '../models/Transaction';
 import WasteType from '../models/WasteType';
 import Reward from '../models/Reward';
 
@@ -13,6 +14,52 @@ router.get('/users', async (_req, res) => {
     try {
         const users = await User.find().sort({ createdAt: -1 });
         res.json({ success: true, data: users });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// --- Stats ---
+
+// GET /api/admin/stats/weekly-activity
+router.get('/stats/weekly-activity', async (_req, res) => {
+    try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const stats = await Transaction.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: sevenDaysAgo }
+                }
+            },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    totalPoints: { $sum: "$totalPoints" },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // Fill in missing days
+        const labels = [];
+        const data = [];
+        const today = new Date();
+
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+
+            const found = stats.find(s => s._id === dateStr);
+            labels.push(dayName);
+            data.push(found ? found.count : 0); // Using count for "Collection" activity
+        }
+
+        res.json({ success: true, data: { labels, data } });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }
