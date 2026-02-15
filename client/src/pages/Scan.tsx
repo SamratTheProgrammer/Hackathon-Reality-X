@@ -15,23 +15,6 @@ export const Scan = () => {
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState("");
 
-    // Simulated QR Scan
-    const handleSimulateScan = () => {
-        // Mocking a QR code data from the Machine App
-        // Format: { id: "TX-123456", points: 150 }
-        const mockData = {
-            id: `TX-${Date.now().toString().slice(-6)}`,
-            points: 150,
-            machineId: "M402",
-            timestamp: new Date().toISOString(),
-            items: [
-                { wasteId: '1', count: 5, points: 50 }, // 5 Plastic Bottles
-                { wasteId: '3', count: 10, points: 120 } // 10 Cans
-            ]
-        };
-
-        processScan(JSON.stringify(mockData));
-    };
 
     const processScan = async (dataString: string) => {
         try {
@@ -223,12 +206,6 @@ export const Scan = () => {
                             </div>
                         )}
 
-                        <button
-                            onClick={handleSimulateScan}
-                            className="bg-gray-800 hover:bg-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all border border-gray-700 w-full mb-8"
-                        >
-                            Simulate Scan (Debug)
-                        </button>
 
                         <div className="w-full border-t border-gray-800 pt-6">
                             <p className="text-sm text-gray-400 mb-4">Camera not working? Enter code manually:</p>
