@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 export const MachineSummary = () => {
     const navigate = useNavigate();
     const { currentTransaction, resetTransaction } = useMachine();
-    const [countdown, setCountdown] = useState(30);
+    const [countdown, setCountdown] = useState(120);
 
     useEffect(() => {
         const timer = setInterval(() => {

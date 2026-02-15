@@ -52,7 +52,7 @@ function App() {
     return (
         <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
             <AppProvider>
-                <Toaster position="top-center" richColors />
+                <Toaster position="top-center" theme="dark" />
                 <Routes>
                     <Route path="/" element={<Home />} />
 

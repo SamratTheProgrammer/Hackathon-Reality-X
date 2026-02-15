@@ -1,7 +1,7 @@
 import { useApp } from "../../context/AppContext";
 import { Save, Plus, Trash2, X, Edit } from "lucide-react";
 import { useState, useEffect } from "react";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 
 // Define WasteType interface locally if not available globally, or extend it
 interface WasteTypeWithId {
@@ -187,7 +187,6 @@ export const AdminWasteRules = () => {
 
     return (
         <div className="space-y-6">
-            <Toaster position="top-right" theme="dark" />
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Waste & Points Configuration</h1>
                 <div className="flex gap-3">
@@ -278,18 +277,32 @@ export const AdminWasteRules = () => {
                             <div>
                                 <label className="block text-sm text-gray-400 mb-2">1. Select Type (Emoji)</label>
                                 <div className="grid grid-cols-5 gap-2 mb-2 max-h-40 overflow-y-auto p-1">
-                                    {PRESET_OPTIONS.map(preset => (
-                                        <button
-                                            key={preset.emoji}
-                                            type="button"
-                                            onClick={() => handlePresetSelect(preset)}
-                                            className={`aspect-square flex flex-col items-center justify-center rounded-lg hover:bg-gray-800 transition-colors ${formData.icon === preset.emoji ? 'bg-gray-800 ring-2 ring-primary' : ''}`}
-                                            title={preset.name}
-                                        >
-                                            <span className="text-2xl mb-1">{preset.emoji}</span>
-                                            <span className="text-[10px] text-gray-500 truncate w-full text-center px-1 leading-tight">{preset.name}</span>
-                                        </button>
-                                    ))}
+                                    {PRESET_OPTIONS.map(preset => {
+                                        // Check if this waste type already exists (case-insensitive)
+                                        const alreadyExists = localTypes.some(
+                                            type => type.name.toLowerCase() === preset.name.toLowerCase()
+                                        );
+
+                                        return (
+                                            <button
+                                                key={preset.emoji}
+                                                type="button"
+                                                onClick={() => !alreadyExists && handlePresetSelect(preset)}
+                                                disabled={alreadyExists}
+                                                className={`aspect-square flex flex-col items-center justify-center rounded-lg transition-colors ${alreadyExists
+                                                        ? 'opacity-40 cursor-not-allowed bg-gray-800/30'
+                                                        : 'hover:bg-gray-800 cursor-pointer'
+                                                    } ${formData.icon === preset.emoji ? 'bg-gray-800 ring-2 ring-primary' : ''}`}
+                                                title={alreadyExists ? `${preset.name} already exists` : preset.name}
+                                            >
+                                                <span className="text-2xl mb-1">{preset.emoji}</span>
+                                                <span className="text-[10px] text-gray-500 truncate w-full text-center px-1 leading-tight">{preset.name}</span>
+                                                {alreadyExists && (
+                                                    <span className="text-[8px] text-red-400 mt-0.5">Exists</span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

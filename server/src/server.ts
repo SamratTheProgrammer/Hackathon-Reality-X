@@ -49,6 +49,7 @@ app.get('/', (req, res) => {
     res.send('Reality-X Server is Running');
 });
 
+// Listen on configured port
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
