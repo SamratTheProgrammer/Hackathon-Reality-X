@@ -96,6 +96,7 @@ interface AppContextType {
     login: (email: string, pass: string) => Promise<boolean>;
     signup: (name: string, email: string, pass: string) => Promise<boolean>;
     logout: () => void;
+    refreshUser: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -182,7 +183,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 if (wtData.success) setWasteTypes(wtData.data);
 
                 // Fetch Rewards
-                const rwRes = await fetch(`${backendUrl}/api/admin/rewards`);
+                // If admin is logged in, fetch all (including inactive), else fetch only active
+                const rewardEndpoint = adminUser ? '/api/admin/rewards' : '/api/user/rewards';
+                const rwRes = await fetch(`${backendUrl}${rewardEndpoint}`);
                 const rwData = await rwRes.json();
                 if (rwData.success) {
                     // Start with empty rewards if none in DB, don't fallback to INITIAL unless fetch fails completely
@@ -320,6 +323,29 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
     };
 
+    const refreshUser = async () => {
+        if (clerkUser) {
+            try {
+                const response = await fetch(`${backendUrl}/api/user/${clerkUser.id}`);
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    setUser({
+                        id: data.data.clerkId || clerkUser.id,
+                        name: data.data.name || clerkUser.fullName || 'User',
+                        email: data.data.email || '',
+                        role: data.data.role || 'user',
+                        wasteStats: data.data.wasteStats,
+                        redemptions: data.data.redemptions
+                    });
+                    setUserPoints(data.data.points || 0);
+                }
+            } catch (error) {
+                console.error("Failed to refresh user data:", error);
+            }
+        }
+    };
+
 
 
     return (
@@ -328,7 +354,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             machines,
             transactions,
             rewards,
-            userPoints,
             userPoints,
             user,
             isAuthenticated,
@@ -342,7 +367,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             updateMachineStatus,
             login,
             signup,
-            logout
+            logout,
+            refreshUser
         }}>
             {children}
         </AppContext.Provider>

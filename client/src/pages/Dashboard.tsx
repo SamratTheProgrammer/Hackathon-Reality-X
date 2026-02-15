@@ -13,14 +13,27 @@ import { useApp } from "../context/AppContext";
 import { useEffect } from "react";
 
 export const Dashboard = () => {
-    const { isAuthenticated, user } = useApp();
+    const { isAuthenticated, user, isLoading } = useApp();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!isAuthenticated) {
+        // Only redirect if we're done loading and still not authenticated
+        if (!isLoading && !isAuthenticated) {
             navigate('/login');
         }
-    }, [isAuthenticated, navigate]);
+    }, [isAuthenticated, isLoading, navigate]);
+
+    // Show loading state while checking authentication
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center text-white">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                    <p className="text-gray-400">Loading your dashboard...</p>
+                </div>
+            </div>
+        );
+    }
 
     if (!isAuthenticated) return null;
 

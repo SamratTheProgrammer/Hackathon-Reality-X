@@ -5,9 +5,10 @@ export const HeroSection = () => {
     return (
         <>
             <div className="flex flex-col max-md:px-2 items-center justify-center">
-                <div className="mt-32 flex items-center justify-center gap-2">
-                    <MapPin className="size-5" />
-                    Available in India: Maharashtra, Delhi, Karnataka, Gujarat & more
+                <div className="mt-32 flex items-center justify-center gap-2 text-center">
+                    <MapPin className="size-5 shrink-0" />
+                    <span className="md:hidden font-medium">Available in India & more</span>
+                    <span className="hidden md:inline font-medium">Available in India: Maharashtra, Delhi, West Bengal, Punjab & more</span>
                 </div>
                 <h1 className="text-center font-urbanist text-[42px]/13 md:text-6xl/20 font-bold max-w-4xl bg-linear-to-r from-white to-white/50 bg-clip-text text-transparent">
                     Revolutionizing Waste Management with <span className="text-primary">Smart Technology</span>

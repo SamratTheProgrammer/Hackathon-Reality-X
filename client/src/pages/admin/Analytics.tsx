@@ -16,7 +16,12 @@ export const AdminAnalytics = () => {
                 const res = await fetch(`${backendUrl}/api/user/community-stats`);
                 const data = await res.json();
                 if (data.success) {
-                    setStats(data.data);
+                    setStats(prev => ({
+                        ...prev,
+                        ...data.data,
+                        // Ensure breakdown exists even if backend doesn't return it
+                        breakdown: data.data.breakdown || prev.breakdown
+                    }));
                 }
             } catch (error) {
                 console.error("Failed to fetch analytics", error);

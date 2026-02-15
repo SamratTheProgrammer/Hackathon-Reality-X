@@ -1,10 +1,22 @@
 import { useApp } from "../../context/AppContext";
 import { Save, Plus, Trash2, X, Edit } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast, Toaster } from "sonner";
+
+// Define WasteType interface locally if not available globally, or extend it
+interface WasteTypeWithId {
+    _id?: string;
+    id: string;
+    name: string;
+    pointsPerUnit: number;
+    unit: string;
+    color: string;
+    icon: string;
+}
 
 export const AdminWasteRules = () => {
     const { wasteTypes, setWasteTypes, backendUrl } = useApp();
-    const [localTypes, setLocalTypes] = useState(wasteTypes);
+    const [localTypes, setLocalTypes] = useState<WasteTypeWithId[]>(wasteTypes as any);
     const [hasChanges, setHasChanges] = useState(false);
 
     // Modal State
@@ -24,15 +36,22 @@ export const AdminWasteRules = () => {
     }, [wasteTypes]);
 
     const handlePointChange = (id: string, val: string) => {
+        if (!id) return; // Guard against undefined IDs
         const points = parseInt(val) || 0;
-        setLocalTypes(prev => prev.map(t => t.id === id ? { ...t, pointsPerUnit: points } : t));
+        setLocalTypes(prev => prev.map(t => {
+            // Use _id for reliable matching
+            if (t._id === id || (t as any).id === id) {
+                return { ...t, pointsPerUnit: points };
+            }
+            return t;
+        }));
         setHasChanges(true);
     };
 
     const handleSavePoints = async () => {
         // Only save items that have changed
         const updates = localTypes.filter(local => {
-            const original = wasteTypes.find(w => w.id === local.id);
+            const original = wasteTypes.find((w: any) => w._id === local._id);
             return original && original.pointsPerUnit !== local.pointsPerUnit;
         });
 
@@ -46,13 +65,14 @@ export const AdminWasteRules = () => {
                 fetch(`${backendUrl}/api/admin/waste-types`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ...type, id: type.id })
+                    body: JSON.stringify({ ...type, id: type._id })
                 })
             ));
             refreshData(); // This will exist in scope
-            alert(`Updated ${updates.length} waste type(s) successfully!`);
+            toast.success(`Updated ${updates.length} waste type(s) successfully!`);
         } catch (error) {
             console.error("Save failed:", error);
+            toast.error("Failed to save changes");
         }
     };
 
@@ -71,9 +91,17 @@ export const AdminWasteRules = () => {
             const res = await fetch(`${backendUrl}/api/admin/waste-types/delete`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id })
+                body: JSON.stringify({ id }) // Ensure ID is sent correctly
             });
-            if (res.ok) refreshData();
+            if (res.ok) {
+                // Remove locally to reflect instantly
+                setLocalTypes(prev => prev.filter(t => (t as any)._id !== id));
+                setWasteTypes(prev => prev.filter(t => (t as any)._id !== id));
+                toast.success("Waste type deleted successfully");
+            } else {
+                console.error("Delete failed");
+                toast.error("Failed to delete waste type");
+            }
         } catch (error) {
             console.error(error);
         }
@@ -97,8 +125,10 @@ export const AdminWasteRules = () => {
             refreshData();
             setShowForm(false);
             resetForm();
+            toast.success(editMode ? "Waste type updated successfully" : "Waste type created successfully");
         } catch (error) {
             console.error(error);
+            toast.error("Operation failed");
         }
     };
 
@@ -109,7 +139,7 @@ export const AdminWasteRules = () => {
 
     const openEdit = (type: any) => {
         setFormData({
-            id: type.id,
+            id: type._id || type.id, // Map _id to id for the form
             name: type.name,
             pointsPerUnit: type.pointsPerUnit,
             unit: type.unit,
@@ -157,6 +187,7 @@ export const AdminWasteRules = () => {
 
     return (
         <div className="space-y-6">
+            <Toaster position="top-right" theme="dark" />
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Waste & Points Configuration</h1>
                 <div className="flex gap-3">
@@ -189,7 +220,7 @@ export const AdminWasteRules = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-800">
                         {localTypes.length > 0 ? localTypes.map((type) => (
-                            <tr key={type.id} className="hover:bg-gray-800/50">
+                            <tr key={type._id || type.id} className="hover:bg-gray-800/50">
                                 <td className="p-4">
                                     <div className="flex items-center gap-3">
                                         <div className={`size-8 rounded-full ${type.color || 'bg-gray-500'} flex items-center justify-center text-white font-bold text-sm shadow-lg`}>
@@ -203,9 +234,11 @@ export const AdminWasteRules = () => {
                                     <div className="flex items-center gap-2">
                                         <input
                                             type="number"
+                                            min="0"
+                                            step="1"
                                             className="w-20 bg-black border border-gray-700 rounded px-2 py-1 text-center font-bold focus:border-primary outline-none"
-                                            value={type.pointsPerUnit}
-                                            onChange={(e) => handlePointChange(type.id, e.target.value)}
+                                            value={localTypes.find(t => (t as any)._id === (type as any)._id)?.pointsPerUnit || type.pointsPerUnit}
+                                            onChange={(e) => handlePointChange(type._id as string, e.target.value)}
                                         />
                                         <span className="text-sm text-yellow-500">pts</span>
                                     </div>
@@ -214,7 +247,7 @@ export const AdminWasteRules = () => {
                                     <button onClick={() => openEdit(type)} className="p-2 hover:bg-blue-500/20 text-blue-500 rounded-lg mr-2">
                                         <Edit className="size-4" />
                                     </button>
-                                    <button onClick={() => handleDelete(type.id)} className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg">
+                                    <button onClick={() => handleDelete(type._id as string)} className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg">
                                         <Trash2 className="size-4" />
                                     </button>
                                 </td>

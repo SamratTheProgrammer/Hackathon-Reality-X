@@ -19,6 +19,7 @@ import { AdminMachines } from "./pages/admin/Machines";
 import { AdminWasteRules } from "./pages/admin/WasteRules";
 import { AdminUsers } from "./pages/admin/Users";
 import { AdminAnalytics } from "./pages/admin/Analytics";
+import { AdminRewards } from "./pages/admin/Rewards";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -45,10 +46,13 @@ const ProtectedAdminRoute = ({ children }: { children: ReactNode }) => {
     return children;
 };
 
+import { Toaster } from 'sonner';
+
 function App() {
     return (
         <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
             <AppProvider>
+                <Toaster position="top-center" richColors />
                 <Routes>
                     <Route path="/" element={<Home />} />
 
@@ -75,6 +79,7 @@ function App() {
                         <Route path="users" element={<AdminUsers />} />
                         <Route path="waste-rules" element={<AdminWasteRules />} />
                         <Route path="analytics" element={<AdminAnalytics />} />
+                        <Route path="rewards" element={<AdminRewards />} />
                     </Route>
 
                 </Routes>

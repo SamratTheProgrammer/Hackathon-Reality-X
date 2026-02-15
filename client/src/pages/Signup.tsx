@@ -17,7 +17,8 @@ export const Signup = () => {
                     <ArrowLeft className="w-4 h-4" /> Back to Home
                 </Link>
 
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent mb-8">Join Reality-X</h1>
+                <img src="/logo.png" alt="EcoLoop" className="w-16 h-16 mb-4" />
+                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-600">EcoLoop</h1>
 
                 <SignUp
                     signInUrl="/login"

@@ -4,6 +4,7 @@ import { useApp } from "../context/AppContext";
 import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 import { Ticket, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export const Redeem = () => {
     const { rewards, userPoints, redeemPoints, isAuthenticated, user } = useApp();
@@ -17,9 +18,9 @@ export const Redeem = () => {
 
         const success = await redeemPoints(cost, name);
         if (success) {
-            alert(`Successfully redeemed: ${name}! Check your wallet/history for the voucher code.`);
+            toast.success(`Successfully redeemed: ${name}! Check your wallet/history for the voucher code.`);
         } else {
-            alert("Redemption failed. Insufficient points or network error.");
+            toast.error("Redemption failed. Insufficient points or network error.");
         }
     };
 

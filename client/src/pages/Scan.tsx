@@ -9,7 +9,7 @@ import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 export const Scan = () => {
     const navigate = useNavigate();
     // @ts-ignore
-    const { addTransaction, isAuthenticated, user, backendUrl } = useApp();
+    const { addTransaction, isAuthenticated, user, backendUrl, refreshUser } = useApp();
     const [manualCode, setManualCode] = useState("");
     const [scanning, setScanning] = useState(true);
     const [result, setResult] = useState<any>(null);
@@ -37,12 +37,10 @@ export const Scan = () => {
         try {
             // Parse Code/ID
             let transactionCode = "";
-            let pointsPreview = 0;
 
             if (dataString.trim().startsWith('{')) {
                 const data = JSON.parse(dataString);
                 transactionCode = data.id;
-                pointsPreview = data.points;
             } else {
                 transactionCode = dataString;
             }
@@ -78,6 +76,10 @@ export const Scan = () => {
 
             if (resData.success) {
                 setResult({ points: resData.pointsAdded });
+                // Refresh user data to update dashboard
+                if (refreshUser) {
+                    await refreshUser();
+                }
             } else {
                 if (resData.message?.includes("already claimed")) {
                     throw new Error("This code has already been used.");

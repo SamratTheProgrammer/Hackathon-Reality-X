@@ -126,7 +126,7 @@ export const MachineSignup = () => {
                         Machine<br />Provisioning
                     </h1>
                     <p className="text-xl text-gray-400 max-w-md">
-                        Register a new Smart Waste Vending Machine to the Reality-X network.
+                        Register a new Smart Waste Vending Machine to the EcoLoop network.
                     </p>
                 </div>
 
@@ -151,7 +151,10 @@ export const MachineSignup = () => {
             <div className="lg:w-1/2 p-6 lg:p-20 overflow-y-auto">
                 <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
                     <div>
-                        <h2 className="text-2xl font-bold text-white mb-2">Register Machine</h2>
+                        <div className="flex items-center gap-3 mb-4">
+                            <img src="/logo.png" alt="EcoLoop" className="w-12 h-auto" />
+                            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-600">EcoLoop Machine</h1>
+                        </div>
                         <p className="text-gray-400">Enter device details to initialize.</p>
                     </div>
 

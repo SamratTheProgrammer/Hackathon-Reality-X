@@ -38,7 +38,7 @@ export const MachineSummary = () => {
                 <CheckCircle className="w-12 h-12" />
             </div>
 
-            <h1 className="text-3xl font-black mb-2 text-white">Success!</h1>
+            <h2 className="text-3xl font-black text-white mb-2">Thank you for using EcoLoop!</h2>
             <p className="text-lg text-gray-400 max-w-md mx-auto mb-6">
                 You've recycled <span className="text-white font-bold">{currentTransaction.items.reduce((a, b) => a + b.count, 0)} items</span>
             </p>
@@ -68,7 +68,7 @@ export const MachineSummary = () => {
             </div>
 
             <p className="mt-6 text-sm text-gray-500">
-                Scan with Reality-X App to claim.<br />
+                Scan with EcoLoop App to claim.<br />
                 Auto-closing in {countdown}s
             </p>
 

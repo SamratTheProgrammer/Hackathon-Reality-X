@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Recycle, Trophy, Leaf, Users } from "lucide-react";
+import { Recycle, Users } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 
 interface Activity {

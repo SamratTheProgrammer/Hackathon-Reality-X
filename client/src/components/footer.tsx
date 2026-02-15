@@ -67,6 +67,11 @@ export const Footer = () => {
                                         Partners
                                     </a>
                                 </li>
+                                <li className="text-sm/7 text-gray-500">
+                                    <a href="/admin-login" className="hover:underline text-primary/80 hover:text-primary">
+                                        Admin Login
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </div>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { Plus, Trash2, Edit, Save, X } from "lucide-react";
+import { Plus, Edit, X, Trash2 } from "lucide-react";
 
 export const AdminRewards = () => {
     const { rewards, setRewards, backendUrl } = useApp();
@@ -57,6 +57,27 @@ export const AdminRewards = () => {
         setShowForm(true);
     };
 
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+        try {
+            const res = await fetch(`${backendUrl}/api/admin/rewards/${id}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Refresh rewards
+                const resRewards = await fetch(`${backendUrl}/api/admin/rewards`);
+                const dataRewards = await resRewards.json();
+                if (dataRewards.success) {
+                    setRewards(dataRewards.data.map((r: any) => ({ ...r, id: r._id || r.id })));
+                }
+            }
+        } catch (error) {
+            console.error("Failed to delete reward:", error);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -78,6 +99,9 @@ export const AdminRewards = () => {
                         <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => handleEdit(reward)} className="p-2 bg-gray-800 rounded-full hover:bg-gray-700">
                                 <Edit className="size-4 text-white" />
+                            </button>
+                            <button onClick={() => handleDelete(reward.id, reward.name)} className="p-2 bg-red-900/50 rounded-full hover:bg-red-900">
+                                <Trash2 className="size-4 text-red-400" />
                             </button>
                         </div>
 

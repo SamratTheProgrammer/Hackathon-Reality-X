@@ -103,6 +103,9 @@ router.post('/waste-types', async (req, res) => {
 router.post('/waste-types/delete', async (req, res) => {
     try {
         const { id } = req.body;
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'ID is required' });
+        }
         await WasteType.findByIdAndDelete(id);
         res.json({ success: true, message: 'Waste type deleted successfully' });
     } catch (error: any) {
@@ -139,6 +142,17 @@ router.post('/rewards', async (req, res) => {
             await newReward.save();
             return res.json({ success: true, data: newReward });
         }
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// DELETE /api/admin/rewards/:id
+router.delete('/rewards/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Reward.findByIdAndDelete(id);
+        res.json({ success: true, message: 'Reward deleted successfully' });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });
     }

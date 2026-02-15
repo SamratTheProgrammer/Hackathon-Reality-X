@@ -4,6 +4,20 @@ import { useApp } from "../../context/AppContext";
 export const SummaryWidgets = () => {
     const { user, userPoints } = useApp();
 
+    // Helper function to format weight in kg and grams
+    const formatWeight = (grams: number) => {
+        const kg = Math.floor(grams / 1000);
+        const g = Math.round(grams % 1000);
+
+        if (kg > 0 && g > 0) {
+            return `${kg}.${g.toString().padStart(3, '0')}`;
+        } else if (kg > 0) {
+            return kg.toString();
+        } else {
+            return (g / 1000).toFixed(3);
+        }
+    };
+
     const stats = [
         {
             label: "Total Points",
@@ -24,7 +38,7 @@ export const SummaryWidgets = () => {
         {
             label: "Waste Recycled",
             value: user?.wasteStats?.totalWeight
-                ? (user.wasteStats.totalWeight / 1000).toFixed(1)
+                ? formatWeight(user.wasteStats.totalWeight)
                 : "0",
             unit: "kg",
             icon: Recycle,

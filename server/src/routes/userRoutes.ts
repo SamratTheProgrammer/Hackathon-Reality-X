@@ -2,6 +2,7 @@ import express from 'express';
 import User from '../models/User';
 import Machine from '../models/Machine';
 import Transaction from '../models/Transaction';
+import Reward from '../models/Reward';
 
 const router = express.Router();
 
@@ -28,6 +29,72 @@ interface IUser {
 }
 // ...
 
+
+// GET /api/user/activities (Public feed)
+router.get('/activities', async (req, res) => {
+    try {
+        const activities = await Transaction.find()
+            .sort({ createdAt: -1 })
+            .limit(10);
+        res.json({ success: true, data: activities });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// GET /api/user/community-stats
+router.get('/community-stats', async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+
+        // Aggregate all transactions for total stats
+        const stats = await Transaction.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalWeight: { $sum: "$totalWeight" }, // in grams
+                    totalPoints: { $sum: "$totalPoints" },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const aggregated = stats[0] || { totalWeight: 0, totalPoints: 0, count: 0 };
+
+        // Estimate items count (rough approximation or aggregate items array if needed)
+        // For now, let's assume average 3 items per transaction if not tracked strictly, 
+        // OR better: unwind items to count them.
+        const itemStats = await Transaction.aggregate([
+            { $unwind: "$items" },
+            { $group: { _id: null, totalItems: { $sum: "$items.count" } } } // Assuming item.count exists
+        ]);
+
+        const totalItems = itemStats[0]?.totalItems || 0;
+
+        res.json({
+            success: true,
+            data: {
+                activeUsers: totalUsers,
+                totalWeight: Math.round(aggregated.totalWeight / 1000), // kg
+                totalItems: totalItems,
+                totalCO2: (aggregated.totalWeight / 1000) * 2.5 // Mock CO2 calc
+            }
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// GET /api/user/rewards
+router.get('/rewards', async (_req, res) => {
+    try {
+        // Fetch only active rewards for users
+        const rewards = await Reward.find({ isActive: true });
+        res.json({ success: true, data: rewards });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 // GET /api/user/:clerkId
 router.get('/:clerkId', async (req, res) => {
@@ -138,17 +205,7 @@ router.post('/transaction', async (req, res) => {
     }
 });
 
-// GET /api/user/activities (Public feed)
-router.get('/activities', async (req, res) => {
-    try {
-        const activities = await Transaction.find()
-            .sort({ createdAt: -1 })
-            .limit(10);
-        res.json({ success: true, data: activities });
-    } catch (error: any) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+
 
 // POST /api/user/redeem
 router.post('/redeem', async (req, res) => {
@@ -296,5 +353,7 @@ router.post('/claim', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
 
 export default router;

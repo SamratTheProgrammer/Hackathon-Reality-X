@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useMachine } from "../context/MachineContext";
 import { PasswordModal } from "../components/PasswordModal";
@@ -7,12 +7,14 @@ import { LogOut } from "lucide-react";
 export const MachineLayout = () => {
     const { logout, machineData } = useMachine();
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+    const navigate = useNavigate();
 
     const handleLogout = (password: string) => {
-        // Verify against machine secret
-        if (password === machineData?.secret) {
+        // Verify against machine password
+        if (password === machineData?.password) {
             logout();
             setIsLogoutModalOpen(false);
+            navigate('/machine-login');
         } else {
             alert("Incorrect Password"); // Simple alert for now, could be improved
         }
@@ -24,18 +26,22 @@ export const MachineLayout = () => {
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 animate-pulse"></div>
 
             {/* Kiosk Header */}
-            <header className="absolute top-0 w-full p-6 flex justify-between items-center z-10 pointer-events-none">
-                <div className="bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border border-gray-800 pointer-events-auto flex items-center gap-4">
-                    <div>
-                        <span className="font-bold text-xl tracking-tighter">Reality-X</span>
-                        <span className="text-xs text-green-500 ml-2 uppercase font-mono">Machine #{machineData?.machineId || machineData?.id || '...'}</span>
+            <header className="absolute top-0 w-full p-4 md:p-6 flex justify-between items-center z-10 pointer-events-none">
+                <div className="bg-black/40 backdrop-blur-xl px-3 py-2 md:px-4 md:py-2 rounded-full border border-gray-800 pointer-events-auto flex items-center gap-2 md:gap-4">
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <img src="/logo.png" alt="EcoLoop" className="h-6 w-auto md:h-8" />
+                        <div>
+                            <span className="text-[10px] md:text-xs text-green-500 ml-1 md:ml-2 uppercase font-mono">
+                                Machine #{machineData?.machineId || machineData?.id || '...'}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 pointer-events-auto">
-                    <div className="bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border border-gray-800 flex items-center gap-2">
+                <div className="flex items-center gap-2 md:gap-4 pointer-events-auto">
+                    <div className="bg-black/40 backdrop-blur-xl px-3 py-2 md:px-4 md:py-2 rounded-full border border-gray-800 flex items-center gap-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-mono text-gray-300">SYSTEM ONLINE</span>
+                        <span className="text-[10px] md:text-xs font-mono text-gray-300 hidden md:inline">SYSTEM ONLINE</span>
                     </div>
 
                     <button
@@ -43,17 +49,17 @@ export const MachineLayout = () => {
                         className="bg-red-500/10 hover:bg-red-500/20 text-red-500 p-2 rounded-full border border-red-500/20 transition-all"
                         title="Logout"
                     >
-                        <LogOut className="w-5 h-5" />
+                        <LogOut className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
                 </div>
             </header>
 
-            <main className="h-screen w-full flex flex-col relative z-0 text-white">
+            <main className="min-h-screen w-full flex flex-col relative z-0 text-white overflow-y-auto pt-20 pb-10">
                 <Outlet />
             </main>
 
             {/* Kiosk Footer / Legal */}
-            <footer className="absolute bottom-4 left-0 w-full text-center text-zinc-600 text-xs z-10 pointer-events-none">
+            <footer className="absolute bottom-2 left-0 w-full text-center text-zinc-600 text-[10px] md:text-xs z-10 pointer-events-none hidden md:block">
                 Smart Waste Management System v2.0 • 24/7 Support: 1800-RECYCLE
             </footer>
 

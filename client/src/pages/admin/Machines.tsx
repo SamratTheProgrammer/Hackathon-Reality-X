@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
 import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle, Power } from "lucide-react";
+import { toast } from "sonner";
 
 export const AdminMachines = () => {
     // Use machines from context which is now dynamic
@@ -104,11 +105,13 @@ export const AdminMachines = () => {
                 refreshMachines();
                 setShowForm(false);
                 resetForm();
+                toast.success(editMode ? "Machine details updated" : "Machine registered successfully");
             } else {
-                alert(data.message);
+                toast.error(data.message || "Operation failed");
             }
         } catch (error) {
             console.error("Form Error:", error);
+            toast.error("An error occurred");
         }
     };
 
@@ -140,8 +143,9 @@ export const AdminMachines = () => {
             const data = await res.json();
             if (data.success) {
                 refreshMachines();
+                toast.success("Machine approved and activated");
             } else {
-                alert("Failed to approve");
+                toast.error("Failed to approve");
             }
         } catch (error) {
             console.error("Approval Error:", error);
