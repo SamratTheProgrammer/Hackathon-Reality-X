@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useApp } from "../../context/AppContext";
-import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle, Power, Eye, EyeOff, Loader2, Search } from "lucide-react";
+import { MapPin, Plus, CheckCircle, AlertTriangle, XCircle, Power, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
