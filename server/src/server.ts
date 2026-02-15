@@ -15,7 +15,15 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+        'https://hackathon-reality-machine.vercel.app',
+        'https://reality-x-server.vercel.app' // Assuming client is also on Vercel
+    ],
+    credentials: true
+}));
 
 // Webhooks (must be before body-parser json)
 // We are handling raw body inside the route itself for /clerk

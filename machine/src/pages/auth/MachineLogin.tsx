@@ -72,6 +72,10 @@ export const MachineLogin = () => {
             <div className="lg:w-1/2 p-6 lg:p-20 flex flex-col justify-center">
                 <div className="max-w-md mx-auto w-full">
                     <div className="mb-8">
+                        <div className="flex items-center gap-3 mb-4">
+                            <img src="/logo.png" alt="EcoLoop" className="w-12 h-auto" />
+                            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-emerald-600">EcoLoop Machine</h1>
+                        </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Machine Login</h2>
                         <p className="text-gray-400">Enter credentials to unlock kiosk mode.</p>
                     </div>
