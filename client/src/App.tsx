@@ -11,6 +11,7 @@ import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { AdminLogin } from "./pages/AdminLogin";
 import { Community } from "./pages/Community";
+import { HowItWorks } from "./pages/HowItWorks";
 
 // Admin Imports
 import { AdminLayout } from "./layouts/AdminLayout";
@@ -67,6 +68,7 @@ function App() {
                     <Route path="/redeem" element={<Redeem />} />
                     <Route path="/locate" element={<Locate />} />
                     <Route path="/community" element={<Community />} />
+                    <Route path="/how-it-works" element={<HowItWorks />} />
 
                     {/* Admin Routes */}
                     <Route path="/admin" element={
