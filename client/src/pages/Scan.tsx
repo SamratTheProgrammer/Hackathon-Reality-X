@@ -225,6 +225,7 @@ export const Scan = () => {
             try {
                 await scannerRef.current.applyVideoConstraints({
                     advanced: [{ torch: !torchOn }]
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } as any);
                 setTorchOn(!torchOn);
             } catch (err) {

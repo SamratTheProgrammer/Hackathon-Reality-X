@@ -14,6 +14,36 @@ interface WasteTypeWithId {
     icon: string;
 }
 
+const PRESET_OPTIONS = [
+    { emoji: "🧴", name: "Plastic Bottle" },
+    { emoji: "🥫", name: "Aluminum Can" },
+    { emoji: "🍾", name: "Glass Bottle" },
+    { emoji: "📄", name: "Paper" },
+    { emoji: "📦", name: "Cardboard" },
+    { emoji: "🔋", name: "E-Waste" },
+    { emoji: "🍏", name: "Organic" },
+    { emoji: "🥡", name: "Tetra Pak" },
+    { emoji: "👕", name: "Textiles" },
+    { emoji: "🔩", name: "Metal Scrap" },
+    { emoji: "🥤", name: "Plastic Cup" },
+    { emoji: "🛍️", name: "Plastic Bag" },
+    { emoji: "💿", name: "CD/DVD" },
+    { emoji: "💊", name: "Medical Waste" },
+    { emoji: "💡", name: "Light Bulb" },
+    { emoji: "🍕", name: "Food Waste" },
+    { emoji: "🪵", name: "Wood" },
+    { emoji: "🚲", name: "Scrap Metal" },
+    { emoji: "📱", name: "Electronics" },
+    { emoji: "♻️", name: "Other Recyclable" }
+];
+
+const COLOR_OPTIONS = [
+    "bg-red-500", "bg-green-500", "bg-blue-500", "bg-yellow-500",
+    "bg-purple-500", "bg-pink-500", "bg-indigo-500", "bg-orange-500",
+    "bg-teal-500", "bg-cyan-500", "bg-lime-500", "bg-emerald-500",
+    "bg-violet-500", "bg-fuchsia-500", "bg-rose-500"
+];
+
 export const AdminWasteRules = () => {
     const { wasteTypes, setWasteTypes, backendUrl } = useApp();
     const [localTypes, setLocalTypes] = useState<WasteTypeWithId[]>(wasteTypes as any);
@@ -150,37 +180,9 @@ export const AdminWasteRules = () => {
         setShowForm(true);
     };
 
-    const PRESET_OPTIONS = [
-        { emoji: "🧴", name: "Plastic Bottle" },
-        { emoji: "🥫", name: "Aluminum Can" },
-        { emoji: "🍾", name: "Glass Bottle" },
-        { emoji: "📄", name: "Paper" },
-        { emoji: "📦", name: "Cardboard" },
-        { emoji: "🔋", name: "E-Waste" },
-        { emoji: "🍏", name: "Organic" },
-        { emoji: "🥡", name: "Tetra Pak" },
-        { emoji: "👕", name: "Textiles" },
-        { emoji: "🔩", name: "Metal Scrap" },
-        { emoji: "🥤", name: "Plastic Cup" },
-        { emoji: "🛍️", name: "Plastic Bag" },
-        { emoji: "💿", name: "CD/DVD" },
-        { emoji: "💊", name: "Medical Waste" },
-        { emoji: "💡", name: "Light Bulb" },
-        { emoji: "🍕", name: "Food Waste" },
-        { emoji: "🪵", name: "Wood" },
-        { emoji: "🚲", name: "Scrap Metal" },
-        { emoji: "📱", name: "Electronics" },
-        { emoji: "♻️", name: "Other Recyclable" }
-    ];
-
-    const COLOR_OPTIONS = [
-        "bg-red-500", "bg-green-500", "bg-blue-500", "bg-yellow-500",
-        "bg-purple-500", "bg-pink-500", "bg-indigo-500", "bg-orange-500",
-        "bg-teal-500", "bg-cyan-500", "bg-lime-500", "bg-emerald-500",
-        "bg-violet-500", "bg-fuchsia-500", "bg-rose-500"
-    ];
 
     const handlePresetSelect = (preset: { emoji: string, name: string }) => {
+        // eslint-disable-next-line react-hooks/purity
         const randomColor = COLOR_OPTIONS[Math.floor(Math.random() * COLOR_OPTIONS.length)];
         setFormData({ ...formData, icon: preset.emoji, name: preset.name, color: randomColor });
     };
@@ -290,8 +292,8 @@ export const AdminWasteRules = () => {
                                                 onClick={() => !alreadyExists && handlePresetSelect(preset)}
                                                 disabled={alreadyExists}
                                                 className={`aspect-square flex flex-col items-center justify-center rounded-lg transition-colors ${alreadyExists
-                                                        ? 'opacity-40 cursor-not-allowed bg-gray-800/30'
-                                                        : 'hover:bg-gray-800 cursor-pointer'
+                                                    ? 'opacity-40 cursor-not-allowed bg-gray-800/30'
+                                                    : 'hover:bg-gray-800 cursor-pointer'
                                                     } ${formData.icon === preset.emoji ? 'bg-gray-800 ring-2 ring-primary' : ''}`}
                                                 title={alreadyExists ? `${preset.name} already exists` : preset.name}
                                             >

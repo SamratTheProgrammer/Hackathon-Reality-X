@@ -16,6 +16,7 @@ export const Locate = () => {
     // Set first machine as selected by default when machines load
     useEffect(() => {
         if (filteredMachines.length > 0 && !selectedMachine) {
+            // eslint-disable-next-line react-hooks/exhaustive-deps
             setSelectedMachine(filteredMachines[0]);
         }
     }, [filteredMachines, selectedMachine]);

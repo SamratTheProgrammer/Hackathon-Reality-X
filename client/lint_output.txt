@@ -1,0 +1,101 @@
+
+> reactjs@0.0.0 lint
+> eslint .
+
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\components\dashboard\CommunityFeed.tsx
+  10:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\context\AppContext.tsx
+  194:56  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  202:53  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  311:27  error    '_name' is defined but never used                                                                                               @typescript-eslint/no-unused-vars
+  311:42  error    '_email' is defined but never used                                                                                              @typescript-eslint/no-unused-vars
+  311:58  error    '_pass' is defined but never used                                                                                               @typescript-eslint/no-unused-vars
+  377:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\layouts\AdminLayout.tsx
+  82:25  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\AdminLogin.tsx
+  35:18  error  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\Locate.tsx
+  10:60  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  19:13  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\Locate.tsx:19:13
+  17 |     useEffect(() => {
+  18 |         if (filteredMachines.length > 0 && !selectedMachine) {
+> 19 |             setSelectedMachine(filteredMachines[0]);
+     |             ^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  20 |         }
+  21 |     }, [filteredMachines, selectedMachine]);
+  22 |  react-hooks/set-state-in-effect
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\Scan.tsx
+   12:5   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+   13:13  error    'addTransaction' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+   13:52  error    'backendUrl' is assigned a value but never used                                                                      @typescript-eslint/no-unused-vars
+   16:42  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+   21:50  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+   81:23  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  102:20  error    '_' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+  179:30  error    '_' is defined but never used                                                                                        @typescript-eslint/no-unused-vars
+  211:8   warning  React Hook useEffect has a missing dependency: 'processScan'. Either include it or remove the dependency array       react-hooks/exhaustive-deps
+  228:22  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\admin\Dashboard.tsx
+  38:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  39:61  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\admin\Machines.tsx
+   13:5   error    'DefaultIcon' is never reassigned. Use 'const' instead                                                              prefer-const
+   32:57  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+   37:36  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+   47:36  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+   51:22  error    'error' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   52:36  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+   87:58  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+  107:8   warning  React Hook useEffect has a missing dependency: 'refreshMachines'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  121:34  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+  284:89  error    Unexpected any. Specify a different type                                                                            @typescript-eslint/no-explicit-any
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\admin\Rewards.tsx
+   54:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   64:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   89:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:66  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\admin\WasteRules.tsx
+   19:83   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   43:39   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   54:50   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   98:62   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   99:62   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  140:29   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  184:54   error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\VICTUS\Desktop\Completed Web Apps\Hackathon Reality-X\client\src\pages\admin\WasteRules.tsx:184:54
+  182 |
+  183 |     const handlePresetSelect = (preset: { emoji: string, name: string }) => {
+> 184 |         const randomColor = COLOR_OPTIONS[Math.floor(Math.random() * COLOR_OPTIONS.length)];
+      |                                                      ^^^^^^^^^^^^^ Cannot call impure function
+  185 |         setFormData({ ...formData, icon: preset.emoji, name: preset.name, color: randomColor });
+  186 |     };
+  187 |  react-hooks/purity
+  239:79   error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  239:101  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  325:129  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+✖ 47 problems (44 errors, 3 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
