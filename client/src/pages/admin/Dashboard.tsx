@@ -34,9 +34,9 @@ export const AdminDashboard = () => {
                 }
 
                 if (dataMachines.success) {
-                    const machines = dataMachines.data;
-                    const available = machines.filter((m: any) => m.status === 'Available').length;
-                    const maintenance = machines.filter((m: any) => m.status === 'Maintenance').length;
+                    const machines: any[] = dataMachines.data; // Keeping any for now as intermediate step or define Machine interface
+                    const available = machines.filter((m) => m.status === 'Available').length;
+                    const maintenance = machines.filter((m) => m.status === 'Maintenance').length;
 
                     setStats(prev => ({
                         ...prev,

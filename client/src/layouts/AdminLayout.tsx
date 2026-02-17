@@ -79,7 +79,7 @@ export const AdminLayout = () => {
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
                     {menu.map((item) => {
                         const isActive = location.pathname === item.path;
-                        // @ts-ignore
+
                         const showAlert = item.alert && !visitedPages.includes(item.path);
 
                         return (

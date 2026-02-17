@@ -1,7 +1,7 @@
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import { Camera, CheckCircle, AlertTriangle, ArrowRight, Zap, ZapOff, RefreshCcw } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { SignInButton, SignUpButton } from "@clerk/clerk-react";
@@ -9,8 +9,7 @@ import { Html5Qrcode } from "html5-qrcode";
 
 export const Scan = () => {
     const navigate = useNavigate();
-    // @ts-ignore
-    const { addTransaction, isAuthenticated, user, backendUrl, refreshUser } = useApp();
+    const { isAuthenticated, user, refreshUser } = useApp();
     const [manualCode, setManualCode] = useState("");
     const [scanning, setScanning] = useState(true);
     const [result, setResult] = useState<any>(null);
@@ -18,7 +17,7 @@ export const Scan = () => {
 
     // Custom Camera UI State
     const [cameraId, setCameraId] = useState<string | null>(null);
-    const [cameras, setCameras] = useState<Array<any>>([]);
+    const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
     const [torchOn, setTorchOn] = useState(false);
 
     // Scanner references
@@ -26,7 +25,7 @@ export const Scan = () => {
     const isScannerRunning = useRef(false);
 
     // Validation Helper
-    const isValidQR = (data: string): boolean => {
+    const isValidQR = useCallback((data: string): boolean => {
         // Check for JSON structure with 'id'
         if (data.trim().startsWith('{')) {
             try {
@@ -41,9 +40,9 @@ export const Scan = () => {
             return true;
         }
         return false;
-    };
+    }, []);
 
-    const processScan = async (dataString: string) => {
+    const processScan = useCallback(async (dataString: string) => {
         try {
             // Pre-fetch Validation
             if (!isValidQR(dataString)) {
@@ -109,7 +108,7 @@ export const Scan = () => {
                 setError("");
             }, 3000);
         }
-    };
+    }, [isValidQR, user, refreshUser]);
 
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -172,7 +171,7 @@ export const Scan = () => {
                             const devices = await Html5Qrcode.getCameras();
                             if (isMounted && devices && devices.length > 0) {
                                 // Filter Logic
-                                const uniqueCameras: any[] = [];
+                                const uniqueCameras: Array<{ id: string; label: string }> = [];
                                 const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
                                 const frontCam = devices.find(d => d.label.toLowerCase().includes('front') || d.label.toLowerCase().includes('user'));
 
@@ -247,7 +246,7 @@ export const Scan = () => {
             isMounted = false;
             clearTimeout(timer);
         };
-    }, [scanning, isAuthenticated, cameraId, cameras.length]); // Dependencies
+    }, [scanning, isAuthenticated, cameraId, cameras.length, processScan]); // Dependencies
 
     // Cleanup on unmount
     useEffect(() => {
@@ -262,45 +261,17 @@ export const Scan = () => {
     const toggleTorch = async () => {
         if (scannerRef.current && isScannerRunning.current) {
             try {
-                // Robust Torch Check
-                // @ts-ignore - getRunningTrack might be missing in some type versions
-                const track = scannerRef.current.getRunningTrack ? scannerRef.current.getRunningTrack() : null;
-
-                if (!track) {
-                    // Fallback if getRunningTrack is not available
-                    await scannerRef.current.applyVideoConstraints({
-                        advanced: [{ torch: !torchOn }]
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    } as any);
-                    setTorchOn(!torchOn);
-                    return;
-                }
-
-                const capabilities = track.getCapabilities();
-                // @ts-ignore - torch is not in standard types sometimes
-                if (!capabilities.torch) {
-                    console.warn("Torch not supported on this device/track");
-                    // Optionally show UI feedback "Torch not available"
-                    return;
-                }
-
-                await track.applyConstraints({
+                // applyVideoConstraints is the robust way to toggle torch in recent html5-qrcode
+                // It handles track retrieval and constraints application internally
+                await scannerRef.current.applyVideoConstraints({
                     advanced: [{ torch: !torchOn }]
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } as any);
                 setTorchOn(!torchOn);
             } catch (err) {
                 console.error("Torch toggle failed", err);
-                // Fallback attempt with video constraints on scanner instance directly if track method fails
-                try {
-                    await scannerRef.current.applyVideoConstraints({
-                        advanced: [{ torch: !torchOn }]
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    } as any);
-                    setTorchOn(!torchOn);
-                } catch (e) {
-                    console.error("Fallback torch failed", e);
-                }
+                setError("Flash not supported or failed to toggle.");
+                setTimeout(() => setError(""), 2000);
             }
         }
     };

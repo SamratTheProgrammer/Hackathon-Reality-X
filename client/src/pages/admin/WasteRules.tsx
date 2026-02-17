@@ -44,6 +44,8 @@ const COLOR_OPTIONS = [
     "bg-violet-500", "bg-fuchsia-500", "bg-rose-500"
 ];
 
+const getRandomColor = () => COLOR_OPTIONS[Math.floor(Math.random() * COLOR_OPTIONS.length)];
+
 export const AdminWasteRules = () => {
     const { wasteTypes, setWasteTypes, backendUrl } = useApp();
     const [localTypes, setLocalTypes] = useState<WasteTypeWithId[]>(wasteTypes as any);
@@ -182,8 +184,7 @@ export const AdminWasteRules = () => {
 
 
     const handlePresetSelect = (preset: { emoji: string, name: string }) => {
-        // eslint-disable-next-line react-hooks/purity
-        const randomColor = COLOR_OPTIONS[Math.floor(Math.random() * COLOR_OPTIONS.length)];
+        const randomColor = getRandomColor();
         setFormData({ ...formData, icon: preset.emoji, name: preset.name, color: randomColor });
     };
 

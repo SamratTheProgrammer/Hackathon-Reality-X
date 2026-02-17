@@ -3,11 +3,12 @@ import { Footer } from "../components/footer";
 import { MapPin, Navigation, Info, Search, Filter } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { useState, useEffect } from "react";
+import type { Machine } from "../context/AppContext";
 
 export const Locate = () => {
     const { machines } = useApp();
     const [filter, setFilter] = useState("All");
-    const [selectedMachine, setSelectedMachine] = useState<any>(null);
+    const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
 
     const filteredMachines = machines.filter(m =>
         m.isActive && (filter === "All" || m.status === filter)
@@ -16,10 +17,10 @@ export const Locate = () => {
     // Set first machine as selected by default when machines load
     useEffect(() => {
         if (filteredMachines.length > 0 && !selectedMachine) {
-            // eslint-disable-next-line react-hooks/exhaustive-deps
             setSelectedMachine(filteredMachines[0]);
         }
-    }, [filteredMachines, selectedMachine]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filteredMachines]);
 
     return (
         <>

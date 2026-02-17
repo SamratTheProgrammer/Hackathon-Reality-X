@@ -11,8 +11,8 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
 const DefaultIcon = L.icon({
-    iconUrl: icon,
-    shadowUrl: iconShadow,
+    iconUrl: String(icon),
+    shadowUrl: String(iconShadow),
     iconSize: [25, 41],
     iconAnchor: [12, 41]
 });
@@ -29,7 +29,7 @@ const ChangeView = ({ center }: { center: [number, number] }) => {
 };
 
 // Helper to handle map clicks
-const LocationMarker = ({ setFormData }: { setFormData: any }) => {
+const LocationMarker = ({ setFormData }: { setFormData: React.Dispatch<React.SetStateAction<any>> }) => {
     const map = useMapEvents({
         async click(e) {
             const { lat, lng } = e.latlng;
@@ -48,7 +48,7 @@ const LocationMarker = ({ setFormData }: { setFormData: any }) => {
                     ...prev,
                     address: data.display_name || `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`
                 }));
-            } catch (error) {
+            } catch {
                 setFormData((prev: any) => ({
                     ...prev,
                     address: `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`

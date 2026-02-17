@@ -7,7 +7,7 @@ interface Activity {
     userName: string;
     totalPoints: number;
     timestamp: string;
-    items: any[];
+    items: { wasteId: string; count: number; points: number }[];
 }
 
 export const CommunityFeed = () => {

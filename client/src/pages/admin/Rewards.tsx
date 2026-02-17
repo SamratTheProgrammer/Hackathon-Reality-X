@@ -5,7 +5,7 @@ import { Plus, Edit, X, Trash2 } from "lucide-react";
 export const AdminRewards = () => {
     const { rewards, setRewards, backendUrl } = useApp();
     const [showForm, setShowForm] = useState(false);
-    const [redemptions, setRedemptions] = useState([]);
+    const [redemptions, setRedemptions] = useState<any[]>([]);
     const [formData, setFormData] = useState({
         id: "",
         name: "",

@@ -32,7 +32,7 @@ export const AdminLogin = () => {
                 setLoading(false);
             }
             // If success, the useEffect above will handle navigation once state updates
-        } catch (err) {
+        } catch {
             setError('An error occurred. Please try again.');
             setLoading(false);
         }
