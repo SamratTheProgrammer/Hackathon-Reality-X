@@ -1,11 +1,11 @@
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
-import { Camera, CheckCircle, AlertTriangle, ArrowRight, Zap, ZapOff, RefreshCcw, ScanLine } from "lucide-react";
+import { Camera, CheckCircle, AlertTriangle, ArrowRight, Zap, ZapOff, RefreshCcw } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { SignInButton, SignUpButton } from "@clerk/clerk-react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 
 export const Scan = () => {
     const navigate = useNavigate();
