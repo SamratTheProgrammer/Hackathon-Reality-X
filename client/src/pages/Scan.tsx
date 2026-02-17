@@ -25,8 +25,31 @@ export const Scan = () => {
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const isScannerRunning = useRef(false);
 
+    // Validation Helper
+    const isValidQR = (data: string): boolean => {
+        // Check for JSON structure with 'id'
+        if (data.trim().startsWith('{')) {
+            try {
+                const parsed = JSON.parse(data);
+                return !!parsed.id;
+            } catch {
+                return false;
+            }
+        }
+        // Check for 'TX-' or 'REDEEM-' prefix if using simple strings
+        if (data.startsWith('TX-') || data.startsWith('REDEEM-')) {
+            return true;
+        }
+        return false;
+    };
+
     const processScan = async (dataString: string) => {
         try {
+            // Pre-fetch Validation
+            if (!isValidQR(dataString)) {
+                throw new Error("Invalid QR Code Format");
+            }
+
             // Parse Code/ID
             let transactionCode = "";
 
@@ -72,9 +95,7 @@ export const Scan = () => {
                     await refreshUser();
                 }
             } else {
-                if (resData.message?.includes("already claimed")) {
-                    throw new Error("This code has already been used.");
-                }
+                // Backend returns specific messages now
                 throw new Error(resData.message || "Claim failed");
             }
 
@@ -145,16 +166,34 @@ export const Scan = () => {
                         });
                     }
 
-                    // Get Cameras if needed
+                    // Get Cameras if needed and Filter (1 Front, 1 Back)
                     if (cameras.length === 0) {
                         try {
                             const devices = await Html5Qrcode.getCameras();
                             if (isMounted && devices && devices.length > 0) {
-                                setCameras(devices);
+                                // Filter Logic
+                                const uniqueCameras: any[] = [];
+                                const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
+                                const frontCam = devices.find(d => d.label.toLowerCase().includes('front') || d.label.toLowerCase().includes('user'));
+
+                                if (backCam) uniqueCameras.push(backCam);
+                                if (frontCam) uniqueCameras.push(frontCam);
+
+                                // If detection failed, just take first 2 unique
+                                if (uniqueCameras.length === 0) {
+                                    uniqueCameras.push(devices[0]);
+                                    if (devices.length > 1) uniqueCameras.push(devices[1]);
+                                } else if (uniqueCameras.length === 1 && devices.length > 1) {
+                                    // If only one found but more exist, add another one that is not already added
+                                    const other = devices.find(d => d.id !== uniqueCameras[0].id);
+                                    if (other) uniqueCameras.push(other);
+                                }
+
+                                setCameras(uniqueCameras);
+
                                 // Set default camera (back) if not set
                                 if (!cameraId) {
-                                    const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
-                                    setCameraId(backCam ? backCam.id : devices[0].id);
+                                    setCameraId(backCam ? backCam.id : uniqueCameras[0].id);
                                     return; // Return here, effect will re-run when cameraId updates
                                 }
                             }
@@ -223,14 +262,45 @@ export const Scan = () => {
     const toggleTorch = async () => {
         if (scannerRef.current && isScannerRunning.current) {
             try {
-                await scannerRef.current.applyVideoConstraints({
+                // Robust Torch Check
+                // @ts-ignore - getRunningTrack might be missing in some type versions
+                const track = scannerRef.current.getRunningTrack ? scannerRef.current.getRunningTrack() : null;
+
+                if (!track) {
+                    // Fallback if getRunningTrack is not available
+                    await scannerRef.current.applyVideoConstraints({
+                        advanced: [{ torch: !torchOn }]
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    } as any);
+                    setTorchOn(!torchOn);
+                    return;
+                }
+
+                const capabilities = track.getCapabilities();
+                // @ts-ignore - torch is not in standard types sometimes
+                if (!capabilities.torch) {
+                    console.warn("Torch not supported on this device/track");
+                    // Optionally show UI feedback "Torch not available"
+                    return;
+                }
+
+                await track.applyConstraints({
                     advanced: [{ torch: !torchOn }]
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } as any);
                 setTorchOn(!torchOn);
             } catch (err) {
                 console.error("Torch toggle failed", err);
-                // Depending on device, applyVideoConstraints might fail or not be supported
+                // Fallback attempt with video constraints on scanner instance directly if track method fails
+                try {
+                    await scannerRef.current.applyVideoConstraints({
+                        advanced: [{ torch: !torchOn }]
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    } as any);
+                    setTorchOn(!torchOn);
+                } catch (e) {
+                    console.error("Fallback torch failed", e);
+                }
             }
         }
     };

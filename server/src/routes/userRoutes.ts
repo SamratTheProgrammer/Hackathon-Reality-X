@@ -295,10 +295,19 @@ router.post('/claim', async (req, res) => {
             userDoc.set('email', `${userId}@placeholder.com`);
         }
 
-        // Find Pending Transaction
-        const transaction = await Transaction.findOne({ transactionCode, status: 'Pending' });
+        // Find Transaction - Check for code existence first
+        const transaction = await Transaction.findOne({ transactionCode });
+
         if (!transaction) {
-            return res.status(404).json({ success: false, message: 'Invalid or already claimed code.' });
+            return res.status(404).json({ success: false, message: 'Invalid QR Code. Transaction not found.' });
+        }
+
+        if (transaction.status === 'Claimed') {
+            return res.status(400).json({ success: false, message: 'This reward has already been claimed.' });
+        }
+
+        if (transaction.status !== 'Pending') {
+            return res.status(400).json({ success: false, message: `Transaction is ${transaction.status}. Cannot claim.` });
         }
 
         // Link Transaction to User
