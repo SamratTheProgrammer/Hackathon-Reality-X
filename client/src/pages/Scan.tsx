@@ -176,7 +176,7 @@ export const Scan = () => {
                             (decodedText) => {
                                 processScan(decodedText);
                             },
-                            (err) => {
+                            (_) => {
                                 // ignore scan errors
                             }
                         );
