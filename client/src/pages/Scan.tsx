@@ -1,10 +1,11 @@
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
-import { Camera, CheckCircle, AlertTriangle, ArrowRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Camera, CheckCircle, AlertTriangle, ArrowRight, Zap, ZapOff, RefreshCcw, ScanLine } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 export const Scan = () => {
     const navigate = useNavigate();
@@ -15,6 +16,14 @@ export const Scan = () => {
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState("");
 
+    // Custom Camera UI State
+    const [cameraId, setCameraId] = useState<string | null>(null);
+    const [cameras, setCameras] = useState<Array<any>>([]);
+    const [torchOn, setTorchOn] = useState(false);
+
+    // Scanner references
+    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const isScannerRunning = useRef(false);
 
     const processScan = async (dataString: string) => {
         try {
@@ -35,12 +44,11 @@ export const Scan = () => {
             // Call Backend to Claim
             setScanning(false);
 
-            // Assuming we have user ID in context or can rely on backend? 
-            // AppContext addTransaction was local. Now we need a direct fetch or context method.
-            // Using fetch directly here for simplicity, or we could add `claimTransaction` to context.
-
-            // We need the authToken/UserId. 
-            // `useApp` provides `user`.
+            // Stop scanner if running
+            if (scannerRef.current && isScannerRunning.current) {
+                await scannerRef.current.stop();
+                isScannerRunning.current = false;
+            }
 
             if (!user?.id) {
                 throw new Error("User not valid");
@@ -72,8 +80,13 @@ export const Scan = () => {
 
         } catch (err: any) {
             setError(err.message || "Invalid Code. Please try again.");
-            setScanning(true); // Reset to scan again
-            setTimeout(() => setError(""), 3000);
+            setScanning(false); // Temporarily stop scanning loop logic in UI
+
+            // Re-enable scanning after error
+            setTimeout(() => {
+                setScanning(true);
+                setError("");
+            }, 3000);
         }
     };
 
@@ -82,7 +95,6 @@ export const Scan = () => {
         if (!manualCode.trim()) return;
 
         // Check for "XXXXXX-PYY" format (Machine Display format)
-        // Regex: 6 digits, hyphen, P, digits
         const machineCodeRegex = /^(\d{6})-P(\d+)$/;
         const match = manualCode.trim().match(machineCodeRegex);
 
@@ -98,19 +110,16 @@ export const Scan = () => {
             return;
         }
 
-        // Try to parse as JSON if they pasted the raw JSON, otherwise treat as ID
         try {
-            // fast fail if it doesn't look like JSON
             if (!manualCode.trim().startsWith('{')) {
                 throw new Error("Not JSON");
             }
             processScan(manualCode);
         } catch {
-            // Assume it is just the ID "TX-..."
             if (manualCode.startsWith('TX-')) {
                 const mockData = {
                     id: manualCode,
-                    points: 150, // Default for manual entry simulation
+                    points: 150,
                     machineId: "Manual",
                     timestamp: new Date().toISOString()
                 };
@@ -122,44 +131,131 @@ export const Scan = () => {
         }
     };
 
-    const [scannerInitialized, setScannerInitialized] = useState(false);
-
+    // Initialize Scanner and toggle based on scanning state
     useEffect(() => {
-        if (scanning && isAuthenticated && !scannerInitialized) {
-            // Dynamically import to avoid SSR issues if any, though regular import is fine in Vite
-            import("html5-qrcode").then(({ Html5QrcodeScanner }) => {
-                // Slight delay to ensure DOM is ready
-                setTimeout(() => {
-                    const scanner = new Html5QrcodeScanner(
-                        "reader",
-                        {
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                            aspectRatio: 1.0,
-                            showTorchButtonIfSupported: true
-                        },
-                        /* verbose= */ false
-                    );
+        let isMounted = true;
 
-                    scanner.render(
-                        (decodedText) => {
-                            console.log("Scan success:", decodedText);
-                            scanner.clear();
-                            setScannerInitialized(false);
-                            processScan(decodedText);
-                        },
-                        (_) => {
-                            // parse error, ignore typical scanning errors
+        const initAndStart = async () => {
+            if (scanning && isAuthenticated) {
+                try {
+                    // Initialize instance if not exists
+                    if (!scannerRef.current) {
+                        scannerRef.current = new Html5Qrcode("reader", {
+                            verbose: false,
+                        });
+                    }
+
+                    // Get Cameras if needed
+                    if (cameras.length === 0) {
+                        try {
+                            const devices = await Html5Qrcode.getCameras();
+                            if (isMounted && devices && devices.length > 0) {
+                                setCameras(devices);
+                                // Set default camera (back) if not set
+                                if (!cameraId) {
+                                    const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
+                                    setCameraId(backCam ? backCam.id : devices[0].id);
+                                    return; // Return here, effect will re-run when cameraId updates
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error getting cameras", e);
+                            if (isMounted) setError("Camera access required.");
                         }
-                    );
-                    setScannerInitialized(true);
-                }, 100);
-            });
-        }
-    }, [scanning, isAuthenticated, scannerInitialized]);
+                    }
 
-    // Cleanup not fully handled here because Html5QrcodeScanner is tricky to cleanup in React strict mode hooks without ref
-    // For hackathon, strict mode might double render but we added scannerInitialized check.
+                    // Start Scanning
+                    if (cameraId && !isScannerRunning.current) {
+                        await scannerRef.current.start(
+                            cameraId,
+                            {
+                                fps: 10,
+                                qrbox: { width: 250, height: 250 },
+                                aspectRatio: 1.0,
+                            },
+                            (decodedText) => {
+                                processScan(decodedText);
+                            },
+                            (err) => {
+                                // ignore scan errors
+                            }
+                        );
+                        isScannerRunning.current = true;
+                    }
+                } catch (err) {
+                    console.error("Failed to start scanner", err);
+                    if (isMounted) isScannerRunning.current = false;
+                }
+            } else {
+                // Stop if not scanning
+                if (scannerRef.current && isScannerRunning.current) {
+                    try {
+                        await scannerRef.current.stop();
+                        isScannerRunning.current = false;
+                    } catch (e) {
+                        console.error("Error stopping scanner", e);
+                    }
+                }
+            }
+        };
+
+        // Delay slightly to ensure DOM is ready
+        const timer = setTimeout(() => {
+            initAndStart();
+        }, 100);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
+    }, [scanning, isAuthenticated, cameraId, cameras.length]); // Dependencies
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (scannerRef.current && isScannerRunning.current) {
+                scannerRef.current.stop().catch(e => console.error("Unmount stop fail", e));
+                isScannerRunning.current = false;
+            }
+        };
+    }, []);
+
+    const toggleTorch = async () => {
+        if (scannerRef.current && isScannerRunning.current) {
+            try {
+                await scannerRef.current.applyVideoConstraints({
+                    advanced: [{ torch: !torchOn }]
+                } as any);
+                setTorchOn(!torchOn);
+            } catch (err) {
+                console.error("Torch toggle failed", err);
+                // Depending on device, applyVideoConstraints might fail or not be supported
+            }
+        }
+    };
+
+    const switchCamera = () => {
+        if (cameras.length > 1) {
+            const currentIdx = cameras.findIndex(c => c.id === cameraId);
+            const nextIdx = (currentIdx + 1) % cameras.length;
+            const nextCamId = cameras[nextIdx].id;
+
+            // Stop current scan first
+            if (scannerRef.current && isScannerRunning.current) {
+                scannerRef.current.stop().then(() => {
+                    isScannerRunning.current = false;
+                    setCameraId(nextCamId); // This will trigger the effect to restart
+                    setTorchOn(false); // Reset torch
+                }).catch(err => {
+                    console.error("Failed to stop for switch", err);
+                    // Force switch anyway?
+                    setCameraId(nextCamId);
+                });
+            } else {
+                setCameraId(nextCamId);
+            }
+        }
+    };
 
     return (
         <>
@@ -189,39 +285,91 @@ export const Scan = () => {
                         </div>
                     </div>
                 ) : scanning ? (
-                    <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-3xl p-8 flex flex-col items-center text-center relative z-10 shadow-2xl">
-                        <div className="mb-6 relative w-full flex justify-center">
-                            {/* Scanner Container */}
-                            <div id="reader" className="w-full max-w-[350px] overflow-hidden rounded-2xl border-2 border-primary/50 bg-black">
-                                {/* The library injects UI here */}
+                    <div className="w-full max-w-md flex flex-col items-center relative z-10">
+                        {/* Premium Scanner UI */}
+                        <div className="relative w-full aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800/50 mb-8">
+                            {/* Video Element */}
+                            <div id="reader" className="w-full h-full object-cover"></div>
+
+                            {/* Overlay UI */}
+                            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6">
+                                {/* Top Controls */}
+                                <div className="flex justify-between items-start pointer-events-auto">
+                                    <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/80">
+                                        Scan QR
+                                    </div>
+                                    <div className="flex gap-3">
+                                        {/* Camera Switch Button */}
+                                        {cameras.length > 1 && (
+                                            <button
+                                                onClick={switchCamera}
+                                                className="size-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all active:scale-95"
+                                            >
+                                                <RefreshCcw className="size-5" />
+                                            </button>
+                                        )}
+                                        {/* Torch Button */}
+                                        <button
+                                            onClick={toggleTorch}
+                                            className={`size-10 rounded-full backdrop-blur-md border flex items-center justify-center transition-all active:scale-95 ${torchOn ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400' : 'bg-black/40 border-white/10 text-white hover:bg-white/20'}`}
+                                        >
+                                            {torchOn ? <ZapOff className="size-5" /> : <Zap className="size-5" />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Center Target Frame */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-48 opacity-80">
+                                    <div className="absolute top-0 left-0 size-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                                    <div className="absolute top-0 right-0 size-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                                    <div className="absolute bottom-0 left-0 size-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                                    <div className="absolute bottom-0 right-0 size-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                                    {/* Scanning Line Animation */}
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-primary/50 shadow-[0_0_20px_rgba(34,197,94,1)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                                </div>
+
+                                {/* Bottom Status */}
+                                <div className="text-center">
+                                    <p className="text-white/80 text-sm font-medium drop-shadow-md bg-black/20 backdrop-blur-sm inline-block px-3 py-1 rounded-full">
+                                        Point camera at code
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
-                        <h2 className="text-2xl font-bold mb-2">Scan QR Code</h2>
-                        <p className="text-gray-400 mb-8">Point your camera at the kiosk screen to claim your points.</p>
+                        {/* Setup for scan animation */}
+                        <style>{`
+                            @keyframes scan {
+                                0% { top: 0%; opacity: 0; }
+                                10% { opacity: 1; }
+                                90% { opacity: 1; }
+                                100% { top: 100%; opacity: 0; }
+                            }
+                        `}</style>
 
+                        {/* Error Display */}
                         {error && (
-                            <div className="flex items-center gap-2 text-red-500 bg-red-500/10 px-4 py-2 rounded-lg mb-4">
-                                <AlertTriangle className="size-4" /> {error}
+                            <div className="flex items-center gap-2 text-white bg-red-500/90 backdrop-blur-sm px-4 py-3 rounded-xl mb-6 shadow-lg animate-in fade-in slide-in-from-bottom-2">
+                                <AlertTriangle className="size-5" /> {error}
                             </div>
                         )}
 
-
-                        <div className="w-full border-t border-gray-800 pt-6">
-                            <p className="text-sm text-gray-400 mb-4">Camera not working? Enter code manually:</p>
+                        {/* Manual Entry Section */}
+                        <div className="w-full max-w-md bg-gray-900/80 backdrop-blur-xl border border-gray-800 rounded-3xl p-6 shadow-xl">
+                            <p className="text-sm text-gray-400 mb-4 font-medium">Having trouble? Enter code manually:</p>
                             <form onSubmit={handleManualSubmit} className="flex gap-2">
                                 <input
                                     type="text"
                                     placeholder="Enter code (e.g., TX-123...)"
                                     value={manualCode}
                                     onChange={(e) => setManualCode(e.target.value)}
-                                    className="flex-1 bg-black border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-primary"
+                                    className="flex-1 bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                                 />
                                 <button
                                     type="submit"
-                                    className="bg-primary hover:bg-green-400 text-black font-bold px-4 py-2 rounded-lg transition-colors"
+                                    className="bg-primary hover:bg-green-400 text-black font-bold px-6 py-3 rounded-xl transition-all active:scale-95 whitespace-nowrap"
                                 >
-                                    Claim Points
+                                    Claim
                                 </button>
                             </form>
                         </div>
