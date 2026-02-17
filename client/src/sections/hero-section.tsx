@@ -20,10 +20,10 @@ export const HeroSection = () => {
                     <Link to="/dashboard" className="bg-primary hover:bg-secondary transition duration-300 text-black px-6 py-2.5 rounded-lg font-bold">
                         Start Recycling
                     </Link>
-                    <button className="border border-gray-600 text-zinc-300 px-4 py-2.5 rounded-lg hover:bg-gray-900">
+                    <Link to='/how-it-works' className="border border-gray-600 text-zinc-300 px-4 py-2.5 rounded-lg hover:bg-gray-900">
                         Learn More
                         <ArrowDownRightIcon className="ml-1 size-5 inline-flex" />
-                    </button>
+                    </Link>
                 </div>
                 <div className="mt-10 flex items-center justify-center gap-2">
                     <img
